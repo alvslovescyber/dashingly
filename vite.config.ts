@@ -13,7 +13,10 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['better-sqlite3', 'electron'],
+              external: ['better-sqlite3'],
+              output: {
+                entryFileNames: '[name].mjs',
+              },
             },
           },
         },
