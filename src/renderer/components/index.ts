@@ -11,3 +11,6 @@ export { default as ProgressRing } from './ProgressRing.vue'
 export { default as Toast } from './Toast.vue'
 export { default as ModalSheet } from './ModalSheet.vue'
 export { default as SpotifyBar } from './SpotifyBar.vue'
+
+// Tile components
+export { default as AIInboxTile } from './tiles/AIInboxTile.vue'

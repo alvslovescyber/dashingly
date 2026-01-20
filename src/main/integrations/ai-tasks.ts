@@ -102,12 +102,12 @@ Generate ${maxSuggestions} personalized task suggestions for today.`,
     if (!result.success) {
       failedAttempts++
       console.error('AI response validation failed:', result.error)
-      
+
       // Show warning in debug mode after 2 failures
       if (failedAttempts >= 2) {
         console.warn('AI suggestions degraded - reducing to 3 suggestions')
       }
-      
+
       throw new Error('AI response validation failed')
     }
 
@@ -145,43 +145,51 @@ function gatherActivityContext(): object {
 
   // Recent Strava activities (last 7 days)
   const stravaActivities = db
-    .prepare(`
+    .prepare(
+      `
       SELECT type, distance_m, moving_time_s, start_date
       FROM strava_activities
       WHERE start_date > ?
       ORDER BY start_date DESC
       LIMIT 10
-    `)
+    `
+    )
     .all(Date.now() - 7 * 24 * 60 * 60 * 1000) as Array<{
-      type: string
-      distance_m: number
-      moving_time_s: number
-      start_date: number
-    }>
+    type: string
+    distance_m: number
+    moving_time_s: number
+    start_date: number
+  }>
 
   // Recent health data
   const latestHealth = db
-    .prepare(`
+    .prepare(
+      `
       SELECT steps, active_cals, sleep_minutes, ts
       FROM health_snapshots
       ORDER BY ts DESC
       LIMIT 1
-    `)
-    .get() as {
-      steps: number
-      active_cals: number
-      sleep_minutes: number
-      ts: number
-    } | undefined
+    `
+    )
+    .get() as
+    | {
+        steps: number
+        active_cals: number
+        sleep_minutes: number
+        ts: number
+      }
+    | undefined
 
   // Today's completed tasks
   const completedToday = db
-    .prepare(`
+    .prepare(
+      `
       SELECT t.title
       FROM task_completions c
       JOIN tasks t ON c.task_id = t.id
       WHERE c.completion_day = ?
-    `)
+    `
+    )
     .all(today) as Array<{ title: string }>
 
   // Weekly Strava distance
@@ -192,17 +200,23 @@ function gatherActivityContext(): object {
   return {
     weeklyRunDistance: Math.round(weeklyDistance * 10) / 10,
     runCount: stravaActivities.filter(a => a.type === 'Run').length,
-    lastActivity: stravaActivities[0] ? {
-      type: stravaActivities[0].type,
-      distanceKm: Math.round(stravaActivities[0].distance_m / 100) / 10,
-      daysAgo: Math.floor((Date.now() - stravaActivities[0].start_date) / (24 * 60 * 60 * 1000)),
-    } : null,
-    latestHealth: latestHealth ? {
-      steps: latestHealth.steps,
-      calories: latestHealth.active_cals,
-      sleepHours: Math.round(latestHealth.sleep_minutes / 60 * 10) / 10,
-      daysAgo: Math.floor((Date.now() - latestHealth.ts) / (24 * 60 * 60 * 1000)),
-    } : null,
+    lastActivity: stravaActivities[0]
+      ? {
+          type: stravaActivities[0].type,
+          distanceKm: Math.round(stravaActivities[0].distance_m / 100) / 10,
+          daysAgo: Math.floor(
+            (Date.now() - stravaActivities[0].start_date) / (24 * 60 * 60 * 1000)
+          ),
+        }
+      : null,
+    latestHealth: latestHealth
+      ? {
+          steps: latestHealth.steps,
+          calories: latestHealth.active_cals,
+          sleepHours: Math.round((latestHealth.sleep_minutes / 60) * 10) / 10,
+          daysAgo: Math.floor((Date.now() - latestHealth.ts) / (24 * 60 * 60 * 1000)),
+        }
+      : null,
     completedToday: completedToday.map(t => t.title),
   }
 }

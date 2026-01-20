@@ -24,11 +24,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { GlassShell, Toast } from './components'
 import HomePage from './pages/HomePage.vue'
-import {
-  DESIGN_WIDTH,
-  DESIGN_HEIGHT,
-  getDynamicScale,
-} from './theme/scaling'
+import { DESIGN_WIDTH, DESIGN_HEIGHT, getDynamicScale } from './theme/scaling'
 
 // Toast ref for global access
 const toastRef = ref<InstanceType<typeof Toast>>()

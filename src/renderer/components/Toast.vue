@@ -79,10 +79,8 @@ defineExpose({
   dismissAll,
   success: (message: string, description?: string) =>
     show({ type: 'success', message, description }),
-  error: (message: string, description?: string) =>
-    show({ type: 'error', message, description }),
-  info: (message: string, description?: string) =>
-    show({ type: 'info', message, description }),
+  error: (message: string, description?: string) => show({ type: 'error', message, description }),
+  info: (message: string, description?: string) => show({ type: 'info', message, description }),
   warning: (message: string, description?: string) =>
     show({ type: 'warning', message, description }),
 })
@@ -168,7 +166,7 @@ defineExpose({
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: 
+  transition:
     background-color var(--duration-fast) var(--ease-default),
     color var(--duration-fast) var(--ease-default);
 }

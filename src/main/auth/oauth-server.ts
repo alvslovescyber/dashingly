@@ -254,10 +254,12 @@ app.post('/health', (req: Request, res: Response) => {
     const db = getDatabase()
 
     // Insert health snapshot
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO health_snapshots (ts, steps, active_cals, sleep_minutes, raw_json)
       VALUES (?, ?, ?, ?, ?)
-    `).run(
+    `
+    ).run(
       result.data.timestamp,
       result.data.steps,
       result.data.activeCalories,
@@ -364,7 +366,7 @@ export function startAuthServer(): Promise<void> {
       resolve()
     })
 
-    server.on('error', (err) => {
+    server.on('error', err => {
       console.error('Auth server error:', err)
       reject(err)
     })
@@ -372,7 +374,7 @@ export function startAuthServer(): Promise<void> {
 }
 
 export function stopAuthServer(): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     if (server) {
       server.close(() => {
         server = null

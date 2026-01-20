@@ -2,12 +2,7 @@
   <div v-if="isVisible" class="spotify-bar" @click="handleClick">
     <!-- Album Art -->
     <div class="spotify-bar__art">
-      <img
-        v-if="albumArt"
-        :src="albumArt"
-        :alt="album"
-        class="spotify-bar__art-image"
-      />
+      <img v-if="albumArt" :src="albumArt" :alt="album" class="spotify-bar__art-image" />
       <div v-else class="spotify-bar__art-placeholder">
         <Music :size="20" :stroke-width="1.5" />
       </div>
@@ -31,10 +26,7 @@
     <!-- Progress -->
     <div class="spotify-bar__progress">
       <div class="spotify-bar__progress-bar">
-        <div
-          class="spotify-bar__progress-fill"
-          :style="{ width: `${progressPercent}%` }"
-        />
+        <div class="spotify-bar__progress-fill" :style="{ width: `${progressPercent}%` }" />
       </div>
     </div>
   </div>
@@ -82,14 +74,10 @@ function handleClick() {
   gap: var(--space-md);
   padding: 10px 14px;
   /* Gradient tile style */
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.06) 100%
-  );
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-tile);
-  box-shadow: 
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   cursor: pointer;
@@ -97,11 +85,7 @@ function handleClick() {
 }
 
 .spotify-bar:hover {
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.08) 100%
-  );
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
 }
 
 /* Album Art */
@@ -201,7 +185,7 @@ function handleClick() {
 
 .spotify-bar__progress-fill {
   height: 100%;
-  background: #1DB954;
+  background: #1db954;
   border-radius: var(--radius-full);
   transition: width 1s linear;
 }

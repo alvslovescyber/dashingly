@@ -45,14 +45,14 @@ export function initBrightness(): BrightnessSupport {
           try {
             // Read max brightness
             maxBrightness = parseInt(readFileSync(maxBrightnessFile, 'utf8').trim(), 10)
-            
+
             // Try to read current brightness (test read access)
             const current = parseInt(readFileSync(brightnessFile, 'utf8').trim(), 10)
-            
+
             isSupported = true
             console.log(`Brightness control initialized: ${backlightPath}`)
             console.log(`Max brightness: ${maxBrightness}, Current: ${current}`)
-            
+
             return {
               supported: true,
               path: backlightPath,
@@ -95,10 +95,10 @@ export function setBrightness(percent: number): boolean {
 
   // Clamp value
   percent = Math.max(0, Math.min(100, percent))
-  
+
   // Convert to raw value
   const rawValue = Math.round((percent / 100) * maxBrightness)
-  
+
   try {
     const brightnessFile = join(backlightPath, 'brightness')
     writeFileSync(brightnessFile, String(rawValue))
@@ -144,7 +144,7 @@ export function isNightTime(nightStart: string, nightEnd: string): boolean {
 
   const [startHour, startMin] = nightStart.split(':').map(Number)
   const [endHour, endMin] = nightEnd.split(':').map(Number)
-  
+
   const startMinutes = startHour * 60 + startMin
   const endMinutes = endHour * 60 + endMin
 
@@ -167,7 +167,7 @@ export function applyScheduledBrightness(schedule: BrightnessSchedule): void {
 
   // Find the most recent applicable entry
   let applicableEntry = schedule.entries[0]
-  
+
   for (const entry of schedule.entries) {
     const [hour, min] = entry.time.split(':').map(Number)
     const entryMinutes = hour * 60 + min

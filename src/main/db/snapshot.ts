@@ -30,20 +30,22 @@ export function getDashboardSnapshot(): DashboardSnapshot {
 
   // Tasks
   const tasks = db
-    .prepare(`
+    .prepare(
+      `
       SELECT id, title, type, schedule_json, is_active, created_at
       FROM tasks
       WHERE is_active = 1
       ORDER BY created_at DESC
-    `)
+    `
+    )
     .all() as Array<{
-      id: string
-      title: string
-      type: string
-      schedule_json: string | null
-      is_active: number
-      created_at: number
-    }>
+    id: string
+    title: string
+    type: string
+    schedule_json: string | null
+    is_active: number
+    created_at: number
+  }>
 
   const mappedTasks: Task[] = tasks.map(t => ({
     id: t.id,
@@ -56,17 +58,19 @@ export function getDashboardSnapshot(): DashboardSnapshot {
 
   // Today's completions
   const taskCompletions = db
-    .prepare(`
+    .prepare(
+      `
       SELECT id, task_id, completion_day, completed_at
       FROM task_completions
       WHERE completion_day = ?
-    `)
+    `
+    )
     .all(today) as Array<{
-      id: string
-      task_id: string
-      completion_day: number
-      completed_at: number
-    }>
+    id: string
+    task_id: string
+    completion_day: number
+    completed_at: number
+  }>
 
   const mappedCompletions: TaskCompletion[] = taskCompletions.map(c => ({
     id: c.id,
@@ -77,21 +81,23 @@ export function getDashboardSnapshot(): DashboardSnapshot {
 
   // Pending suggestions
   const suggestions = db
-    .prepare(`
+    .prepare(
+      `
       SELECT id, logical_day, title, reason, source, status, created_at
       FROM task_suggestions
       WHERE status = 'pending' AND logical_day = ?
       ORDER BY created_at DESC
-    `)
+    `
+    )
     .all(today) as Array<{
-      id: string
-      logical_day: number
-      title: string
-      reason: string
-      source: string
-      status: string
-      created_at: number
-    }>
+    id: string
+    logical_day: number
+    title: string
+    reason: string
+    source: string
+    status: string
+    created_at: number
+  }>
 
   const mappedSuggestions: TaskSuggestion[] = suggestions.map(s => ({
     id: s.id,
@@ -173,9 +179,9 @@ function getStravaStatus(weekDays: number[]): StravaStatus | null {
   // Get weekly data
   const weekData: number[] = []
   for (const day of weekDays) {
-    const agg = db
-      .prepare('SELECT distance_m FROM strava_daily_agg WHERE day = ?')
-      .get(day) as { distance_m: number } | undefined
+    const agg = db.prepare('SELECT distance_m FROM strava_daily_agg WHERE day = ?').get(day) as
+      | { distance_m: number }
+      | undefined
 
     weekData.push(agg?.distance_m ? agg.distance_m / 1000 : 0) // Convert to km
   }
@@ -200,18 +206,22 @@ function getHealthStatus(): HealthStatus | null {
 
   // Get latest snapshot
   const latest = db
-    .prepare(`
+    .prepare(
+      `
       SELECT ts, steps, active_cals, sleep_minutes
       FROM health_snapshots
       ORDER BY ts DESC
       LIMIT 1
-    `)
-    .get() as {
-      ts: number
-      steps: number
-      active_cals: number
-      sleep_minutes: number
-    } | undefined
+    `
+    )
+    .get() as
+    | {
+        ts: number
+        steps: number
+        active_cals: number
+        sleep_minutes: number
+      }
+    | undefined
 
   if (!latest) return null
 
@@ -241,21 +251,25 @@ function getSpotifyStatus(): SpotifyStatus | null {
 
   // Get latest now playing
   const latest = db
-    .prepare(`
+    .prepare(
+      `
       SELECT is_playing, track, artist, album, album_art_url, progress_ms, duration_ms
       FROM spotify_now_playing
       ORDER BY ts DESC
       LIMIT 1
-    `)
-    .get() as {
-      is_playing: number
-      track: string
-      artist: string
-      album: string
-      album_art_url: string | null
-      progress_ms: number
-      duration_ms: number
-    } | undefined
+    `
+    )
+    .get() as
+    | {
+        is_playing: number
+        track: string
+        artist: string
+        album: string
+        album_art_url: string | null
+        progress_ms: number
+        duration_ms: number
+      }
+    | undefined
 
   if (!latest) {
     return {
@@ -294,17 +308,21 @@ function getBibleStatus(today: number): BibleStatus | null {
 
   // Get today's reading
   const reading = db
-    .prepare(`
+    .prepare(
+      `
       SELECT day_index, reference, source, title
       FROM bible_plan
       WHERE day_index = ?
-    `)
-    .get(dayIndex) as {
-      day_index: number
-      reference: string
-      source: string
-      title: string | null
-    } | undefined
+    `
+    )
+    .get(dayIndex) as
+    | {
+        day_index: number
+        reference: string
+        source: string
+        title: string | null
+      }
+    | undefined
 
   if (!reading) {
     return {

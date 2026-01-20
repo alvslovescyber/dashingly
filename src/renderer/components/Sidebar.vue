@@ -105,7 +105,7 @@ const navItems = [
   background: linear-gradient(135deg, var(--color-blue) 0%, #1d7cf2 100%);
   border-radius: 10px;
   color: var(--color-white);
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(59, 130, 246, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }

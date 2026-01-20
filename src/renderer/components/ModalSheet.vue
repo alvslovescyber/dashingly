@@ -2,11 +2,7 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="modelValue" class="modal-sheet__overlay" @click="handleOverlayClick">
-        <div
-          class="modal-sheet"
-          :class="[`modal-sheet--${size}`]"
-          @click.stop
-        >
+        <div class="modal-sheet" :class="[`modal-sheet--${size}`]" @click.stop>
           <!-- Header -->
           <div class="modal-sheet__header">
             <h2 class="modal-sheet__title">{{ title }}</h2>
@@ -63,7 +59,7 @@ function handleOverlayClick() {
 // Prevent body scroll when modal is open
 watch(
   () => props.modelValue,
-  (isOpen) => {
+  isOpen => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
     } else {
@@ -142,7 +138,7 @@ watch(
   border-radius: 50%;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: 
+  transition:
     background-color var(--duration-fast) var(--ease-default),
     color var(--duration-fast) var(--ease-default);
 }

@@ -16,11 +16,11 @@ let db: Database.Database | null = null
  */
 function getDbPath(): string {
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
-  
+
   if (isDev) {
     return join(process.env.APP_ROOT || __dirname, 'data', 'glasspi.db')
   }
-  
+
   return join(app.getPath('userData'), 'glasspi.db')
 }
 
@@ -29,35 +29,35 @@ function getDbPath(): string {
  */
 export function initDatabase(): Database.Database {
   if (db) return db
-  
+
   const dbPath = getDbPath()
-  
+
   // Ensure directory exists
   const dbDir = dirname(dbPath)
   if (!existsSync(dbDir)) {
     mkdirSync(dbDir, { recursive: true })
   }
-  
+
   console.log('Initializing database at:', dbPath)
-  
+
   // Create database connection
   db = new Database(dbPath, {
     // Enable WAL mode for better concurrency
     fileMustExist: false,
   })
-  
+
   // Enable WAL mode
   db.pragma('journal_mode = WAL')
-  
+
   // Enable foreign keys
   db.pragma('foreign_keys = ON')
-  
+
   // Run schema
   runSchema(db)
-  
+
   // Run migrations
   runMigrations(db)
-  
+
   return db
 }
 
@@ -88,7 +88,7 @@ function runSchema(database: Database.Database): void {
   try {
     // Look for schema file
     const schemaPath = join(__dirname, 'schema.sql')
-    
+
     if (existsSync(schemaPath)) {
       const schema = readFileSync(schemaPath, 'utf8')
       database.exec(schema)
@@ -122,11 +122,11 @@ function runMigrations(database: Database.Database): void {
   const currentVersion = database
     .prepare('SELECT MAX(version) as version FROM migrations')
     .get() as { version: number | null }
-  
+
   const version = currentVersion?.version || 0
-  
+
   console.log('Current database version:', version)
-  
+
   // Define migrations
   const migrations: Array<{ version: number; description: string; sql: string }> = [
     // Future migrations go here
@@ -136,19 +136,19 @@ function runMigrations(database: Database.Database): void {
     //   sql: 'ALTER TABLE tasks ADD COLUMN new_column TEXT;',
     // },
   ]
-  
+
   // Run pending migrations
   for (const migration of migrations) {
     if (migration.version > version) {
       console.log(`Running migration ${migration.version}: ${migration.description}`)
-      
+
       const runMigration = database.transaction(() => {
         database.exec(migration.sql)
         database
           .prepare('INSERT INTO migrations (version, applied_at, description) VALUES (?, ?, ?)')
           .run(migration.version, Date.now(), migration.description)
       })
-      
+
       runMigration()
     }
   }
@@ -160,12 +160,12 @@ function runMigrations(database: Database.Database): void {
 
 export function getSetting<T>(key: string, defaultValue: T): T {
   const database = getDatabase()
-  const row = database
-    .prepare('SELECT value FROM settings WHERE key = ?')
-    .get(key) as { value: string } | undefined
-  
+  const row = database.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+    | { value: string }
+    | undefined
+
   if (!row) return defaultValue
-  
+
   try {
     return JSON.parse(row.value) as T
   } catch {
@@ -191,19 +191,26 @@ export function deleteSetting(key: string): void {
 
 export function getLastSync(key: string): number | null {
   const database = getDatabase()
-  const row = database
-    .prepare('SELECT last_sync FROM sync_status WHERE key = ?')
-    .get(key) as { last_sync: number } | undefined
-  
+  const row = database.prepare('SELECT last_sync FROM sync_status WHERE key = ?').get(key) as
+    | { last_sync: number }
+    | undefined
+
   return row?.last_sync ?? null
 }
 
-export function setLastSync(key: string, timestamp: number = Date.now(), status?: string, error?: string): void {
+export function setLastSync(
+  key: string,
+  timestamp: number = Date.now(),
+  status?: string,
+  error?: string
+): void {
   const database = getDatabase()
   database
-    .prepare(`
+    .prepare(
+      `
       INSERT OR REPLACE INTO sync_status (key, last_sync, status, error)
       VALUES (?, ?, ?, ?)
-    `)
+    `
+    )
     .run(key, timestamp, status || 'success', error || null)
 }

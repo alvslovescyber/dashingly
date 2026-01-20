@@ -2,12 +2,12 @@ import type { LogicalDay } from '../types'
 
 /**
  * Logical Day Utility
- * 
+ *
  * The "logical day" starts at 12:00 PM (noon) local time, not midnight.
  * This means:
  * - 11:59 AM on Jan 2nd is still considered Jan 1st (logical day)
  * - 12:00 PM on Jan 2nd starts the Jan 2nd logical day
- * 
+ *
  * This is useful for daily habits where the "day" extends into late night.
  */
 
@@ -18,20 +18,20 @@ const LOGICAL_DAY_START_HOUR = 12 // Noon
  */
 export function getLogicalDay(timestamp: number = Date.now(), timezone?: string): LogicalDay {
   const date = new Date(timestamp)
-  
+
   // If timezone is provided, we need to convert
   // For now, we work with local time
   const hours = date.getHours()
-  
+
   // If before noon, we're still in "yesterday's" logical day
   if (hours < LOGICAL_DAY_START_HOUR) {
     date.setDate(date.getDate() - 1)
   }
-  
+
   const year = date.getFullYear()
   const month = date.getMonth() + 1 // 0-indexed
   const day = date.getDate()
-  
+
   return year * 10000 + month * 100 + day
 }
 
@@ -49,23 +49,26 @@ export function logicalDayToDate(logicalDay: LogicalDay): Date {
   const year = Math.floor(logicalDay / 10000)
   const month = Math.floor((logicalDay % 10000) / 100) - 1 // 0-indexed for Date
   const day = logicalDay % 100
-  
+
   return new Date(year, month, day, LOGICAL_DAY_START_HOUR, 0, 0, 0)
 }
 
 /**
  * Format a LogicalDay as a human-readable string
  */
-export function formatLogicalDay(logicalDay: LogicalDay, format: 'short' | 'long' = 'short'): string {
+export function formatLogicalDay(
+  logicalDay: LogicalDay,
+  format: 'short' | 'long' = 'short'
+): string {
   const date = logicalDayToDate(logicalDay)
-  
+
   if (format === 'short') {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
     })
   }
-  
+
   return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -104,22 +107,22 @@ export function getLogicalDayEnd(logicalDay: LogicalDay): number {
  */
 export function getWeekLogicalDays(referenceDay?: LogicalDay): LogicalDay[] {
   const refDate = referenceDay ? logicalDayToDate(referenceDay) : new Date()
-  
+
   // Find Monday of this week
   const dayOfWeek = refDate.getDay()
   const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // Monday is 1, Sunday is 0
-  
+
   const monday = new Date(refDate)
   monday.setDate(refDate.getDate() + diff)
   monday.setHours(LOGICAL_DAY_START_HOUR, 0, 0, 0)
-  
+
   const days: LogicalDay[] = []
   for (let i = 0; i < 7; i++) {
     const date = new Date(monday)
     date.setDate(monday.getDate() + i)
     days.push(getLogicalDay(date.getTime()))
   }
-  
+
   return days
 }
 

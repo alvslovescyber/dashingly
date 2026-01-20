@@ -1,11 +1,7 @@
 <template>
   <button
     class="icon-button"
-    :class="[
-      `icon-button--${size}`,
-      `icon-button--${variant}`,
-      { 'icon-button--active': active }
-    ]"
+    :class="[`icon-button--${size}`, `icon-button--${variant}`, { 'icon-button--active': active }]"
     :disabled="disabled"
     @click="$emit('click')"
   >
@@ -51,7 +47,7 @@ const iconSize = computed(() => {
   cursor: pointer;
   border-radius: var(--radius-button);
   color: var(--text-tertiary);
-  transition: 
+  transition:
     background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out),
     transform var(--duration-fast) var(--ease-out);
@@ -72,9 +68,18 @@ const iconSize = computed(() => {
 }
 
 /* Size Variants */
-.icon-button--sm { width: 30px; height: 30px; }
-.icon-button--md { width: 36px; height: 36px; }
-.icon-button--lg { width: 44px; height: 44px; }
+.icon-button--sm {
+  width: 30px;
+  height: 30px;
+}
+.icon-button--md {
+  width: 36px;
+  height: 36px;
+}
+.icon-button--lg {
+  width: 44px;
+  height: 44px;
+}
 
 /* Variant: Ghost */
 .icon-button--ghost:hover {
@@ -83,11 +88,7 @@ const iconSize = computed(() => {
 
 /* Variant: Glass */
 .icon-button--glass {
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
 }

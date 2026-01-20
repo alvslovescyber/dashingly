@@ -16,8 +16,14 @@ export const settingsSchema = z.object({
     enabled: z.boolean().default(true),
     current: z.number().min(0).max(100).default(100),
     nightMode: z.boolean().default(false),
-    nightStart: z.string().regex(/^\d{2}:\d{2}$/).default('22:00'),
-    nightEnd: z.string().regex(/^\d{2}:\d{2}$/).default('07:00'),
+    nightStart: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .default('22:00'),
+    nightEnd: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .default('07:00'),
     nightBrightness: z.number().min(0).max(100).default(20),
   }),
   notifications: z.object({

@@ -8,10 +8,7 @@ export const VIEWPORT_WIDTH = 800
 export const VIEWPORT_HEIGHT = 480
 
 // Calculate the scale factor (min to maintain aspect ratio)
-export const SCALE = Math.min(
-  VIEWPORT_WIDTH / DESIGN_WIDTH,
-  VIEWPORT_HEIGHT / DESIGN_HEIGHT
-)
+export const SCALE = Math.min(VIEWPORT_WIDTH / DESIGN_WIDTH, VIEWPORT_HEIGHT / DESIGN_HEIGHT)
 // SCALE ≈ 0.533
 
 // Calculate offset for centering
@@ -63,8 +60,5 @@ export function getDynamicScale(): number {
     return SCALE
   }
   // In dev mode, scale based on window size
-  return Math.min(
-    window.innerWidth / DESIGN_WIDTH,
-    window.innerHeight / DESIGN_HEIGHT
-  )
+  return Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT)
 }

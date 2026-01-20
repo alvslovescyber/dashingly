@@ -31,7 +31,7 @@
 
   /* Blur - SPECIFIC SHELL ONLY */
   --blur-glass-shell: 20px;
-  
+
   /* Shadows - MACHINED PRECISION */
   --shadow-shell: 0 30px 80px rgba(0, 0, 0, 0.35); /* Deeper shell shadow */
   --shadow-tile: 0 12px 30px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -41,30 +41,38 @@
   /* Glass Colors - HIERARCHY */
   /* Shell: Blurred & Saturated */
   --glass-shell: rgba(255, 255, 255, 0.08);
-  
+
   /* Tiles: NO BLUR, Stronger Gradient */
-  --glass-tile: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
-  --glass-tile-hover: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
-  
+  --glass-tile: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  --glass-tile-hover: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+
   --glass-sidebar: rgba(255, 255, 255, 0.06);
   --glass-active: rgba(255, 255, 255, 0.2);
 
   /* Borders - PRECISE */
   --border-tile: 1px solid rgba(255, 255, 255, 0.14);
-  --border-shell: 1px solid rgba(255, 255, 255, 0.10);
+  --border-shell: 1px solid rgba(255, 255, 255, 0.1);
 
   /* Colors - REFINED */
-  --color-blue: #3B82F6;
-  --color-blue-light: #60A5FA;
-  --color-blue-dark: #2563EB;
+  --color-blue: #3b82f6;
+  --color-blue-light: #60a5fa;
+  --color-blue-dark: #2563eb;
   --color-blue-glow: rgba(59, 130, 246, 0.25);
-  --color-teal: #14B8A6;
-  --color-green: #22C55E;
-  --color-green-light: #4ADE80;
-  --color-orange: #F97316;
-  --color-red: #EF4444;
-  --color-purple: #8B5CF6;
-  --color-white: #FFFFFF;
+  --color-teal: #14b8a6;
+  --color-green: #22c55e;
+  --color-green-light: #4ade80;
+  --color-orange: #f97316;
+  --color-red: #ef4444;
+  --color-purple: #8b5cf6;
+  --color-white: #ffffff;
 
   /* Text - STRONGER HIERARCHY */
   --text-primary: rgba(255, 255, 255, 0.95);
@@ -81,10 +89,10 @@
 
   /* Typography - REFINED WEIGHTS */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-regular: 400;  /* Standard text */
-  --font-medium: 500;   /* UI Labels */
+  --font-regular: 400; /* Standard text */
+  --font-medium: 500; /* UI Labels */
   --font-semibold: 600; /* Headings */
-  --font-bold: 700;     /* Numbers/Stats */
+  --font-bold: 700; /* Numbers/Stats */
 }
 
 /* Base Styles */
@@ -94,7 +102,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -135,7 +144,9 @@ html, body {
 }
 
 /* Focus */
-*:focus { outline: none; }
+*:focus {
+  outline: none;
+}
 *:focus-visible {
   outline: 2px solid var(--color-blue);
   outline-offset: 2px;
@@ -143,23 +154,47 @@ html, body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.animate-fade-in { animation: fadeIn var(--duration-normal) var(--ease-out); }
-.animate-slide-up { animation: slideUp var(--duration-normal) var(--ease-out); }
-.animate-scale-in { animation: scaleIn var(--duration-fast) var(--ease-out); }
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+.animate-slide-up {
+  animation: slideUp var(--duration-normal) var(--ease-out);
+}
+.animate-scale-in {
+  animation: scaleIn var(--duration-fast) var(--ease-out);
+}
 
 /* Prevent image drag */
-img { -webkit-user-drag: none; }
+img {
+  -webkit-user-drag: none;
+}

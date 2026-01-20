@@ -1,10 +1,7 @@
 <template>
   <div
     class="tile-card"
-    :class="[
-      `tile-card--${size}`,
-      { 'tile-card--interactive': interactive }
-    ]"
+    :class="[`tile-card--${size}`, { 'tile-card--interactive': interactive }]"
     @click="handleClick"
   >
     <!-- Header -->
@@ -12,8 +9,8 @@
       <slot name="header">
         <div class="tile-header__content">
           <component
-            v-if="icon"
             :is="icon"
+            v-if="icon"
             class="tile-header__icon"
             :size="16"
             :stroke-width="2"
@@ -87,17 +84,17 @@ function handleClick() {
   background: var(--glass-tile);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  
+
   /* Precise hairline border */
   border: var(--border-tile);
   border-radius: var(--radius-tile);
-  
+
   /* Layered shadows for depth */
   box-shadow: var(--shadow-tile);
-  
+
   padding: var(--space-md);
   overflow: hidden;
-  transition: 
+  transition:
     transform var(--duration-fast) var(--ease-out),
     box-shadow var(--duration-fast) var(--ease-out),
     background var(--duration-normal) var(--ease-out);
@@ -117,10 +114,18 @@ function handleClick() {
 }
 
 /* Size Variants */
-.tile-card--sm { min-height: 80px; }
-.tile-card--md { min-height: 120px; }
-.tile-card--lg { min-height: 180px; }
-.tile-card--xl { min-height: 240px; }
+.tile-card--sm {
+  min-height: 80px;
+}
+.tile-card--md {
+  min-height: 120px;
+}
+.tile-card--lg {
+  min-height: 180px;
+}
+.tile-card--xl {
+  min-height: 240px;
+}
 
 /* Header - REFINED TYPOGRAPHY */
 .tile-header {

@@ -7,21 +7,12 @@
       :class="{ 'chip-tab--active': modelValue === tab.value }"
       @click="$emit('update:modelValue', tab.value)"
     >
-      <component
-        v-if="tab.icon"
-        :is="tab.icon"
-        :size="13"
-        class="chip-tab__icon"
-      />
+      <component :is="tab.icon" v-if="tab.icon" :size="13" class="chip-tab__icon" />
       <span>{{ tab.label }}</span>
     </button>
 
     <!-- Add Button (optional) -->
-    <button
-      v-if="showAdd"
-      class="chip-tab chip-tab--add"
-      @click="$emit('add')"
-    >
+    <button v-if="showAdd" class="chip-tab chip-tab--add" @click="$emit('add')">
       <Plus :size="13" />
       <span>New</span>
     </button>
@@ -84,7 +75,7 @@ defineEmits<{
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
-  transition: 
+  transition:
     background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
@@ -108,7 +99,7 @@ defineEmits<{
   border-color: var(--color-blue);
   color: var(--color-white);
   font-weight: var(--font-semibold);
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(59, 130, 246, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }

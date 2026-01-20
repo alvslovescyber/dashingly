@@ -1,5 +1,5 @@
 <template>
-  <div class="mini-chart" ref="chartContainer">
+  <div ref="chartContainer" class="mini-chart">
     <canvas ref="canvas"></canvas>
   </div>
 </template>
@@ -101,48 +101,48 @@ function createChart() {
           backgroundColor: 'rgba(15, 23, 42, 0.9)',
           titleColor: 'rgba(255, 255, 255, 0.95)',
           bodyColor: 'rgba(255, 255, 255, 0.85)',
-          titleFont: { size: 13, weight: '600', family: 'Inter' },
+          titleFont: { size: 13, weight: 'bold', family: 'Inter' },
           bodyFont: { size: 12, family: 'Inter' },
           cornerRadius: 8,
           borderColor: 'rgba(255, 255, 255, 0.1)',
           borderWidth: 1,
         },
       },
-      layout: { 
-        padding: { left: -8, right: -8, top: 10, bottom: 0 } 
+      layout: {
+        padding: { left: -8, right: -8, top: 10, bottom: 0 },
       },
       scales: {
-        x: { 
-          display: false, 
-          grid: { display: false } 
+        x: {
+          display: false,
+          grid: { display: false },
         },
-        y: { 
-          display: false, 
+        y: {
+          display: false,
           grid: { display: false },
           min: 0,
-        }
+        },
       },
       elements: {
-        point: { 
-          radius: 0, 
+        point: {
+          radius: 0,
           hitRadius: 20,
           hoverRadius: 4,
           backgroundColor: props.color,
           borderWidth: 2,
           borderColor: '#FFF',
         },
-        line: { 
-          borderWidth: 2.5, 
+        line: {
+          borderWidth: 2.5,
           tension: 0.45,
           borderCapStyle: 'round',
           borderJoinStyle: 'round',
-        }
+        },
       },
       interaction: {
         mode: 'nearest',
         axis: 'x',
-        intersect: false
-      }
+        intersect: false,
+      },
     },
   })
 }

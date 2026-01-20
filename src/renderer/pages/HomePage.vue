@@ -1,243 +1,242 @@
 <template>
   <div class="home-page">
     <!-- Sidebar -->
-    <Sidebar
-      :current-route="currentSection"
-      @navigate="handleNavigate"
-    />
+    <Sidebar :current-route="currentSection" @navigate="handleNavigate" />
 
     <!-- Main Content -->
     <div class="home-page__main">
       <!-- Top Bar -->
-      <TopBar
-        :display-name="displayName"
-        @open-settings="showSettings = true"
-      />
-
-      <!-- Chip Tabs -->
-      <div class="home-page__tabs">
-        <ChipTabs
-          v-model="currentSection"
-          :tabs="sectionTabs"
-          :show-add="false"
-        />
-      </div>
-
-      <!-- Tiles Grid -->
-      <div class="home-page__grid">
-        <!-- Row 1: Promo + Spotify + Camera -->
-        <div class="home-page__row home-page__row--top">
-          <!-- Upgrade Promo Tile -->
-          <TileCard class="tile--promo" size="sm" :interactive="false">
-            <div class="promo-content">
-              <div class="promo-text">
-                <span class="promo-title">Upgrade to Pro</span>
-                <span class="promo-desc">Get 1 month free and unlock</span>
-              </div>
-              <button class="promo-button">Upgrade</button>
-            </div>
-          </TileCard>
-
-          <!-- Spotify Now Playing -->
-          <SpotifyBar
-            :is-visible="spotifyData.isPlaying || mockMode"
-            :is-playing="spotifyData.isPlaying"
-            :track="spotifyData.track"
-            :artist="spotifyData.artist"
-            :album="spotifyData.album"
-            :album-art="spotifyData.albumArt"
-            :progress-ms="spotifyData.progressMs"
-            :duration-ms="spotifyData.durationMs"
-            class="tile--spotify"
-          />
-
-          <!-- Camera Preview Tile -->
-          <TileCard class="tile--camera" size="sm">
-            <div class="camera-preview">
-              <div class="camera-header">
-                <span class="camera-status">Online</span>
-                <span class="camera-label">Hall</span>
-              </div>
-              <div class="camera-image">
-                <Video :size="32" />
-              </div>
-              <div class="camera-controls">
-                <IconButton :icon="Video" size="sm" variant="glass" />
-                <IconButton :icon="Image" size="sm" variant="glass" />
-                <IconButton :icon="ZoomIn" size="sm" variant="glass" />
-              </div>
-            </div>
-          </TileCard>
-        </div>
-
-        <!-- Row 2: Main Tiles -->
-        <div class="home-page__row home-page__row--main">
-          <!-- Strava / Activity Tile -->
-          <TileCard
-            title="Weekly Running"
-            :icon="Activity"
-            class="tile--strava"
-            size="lg"
-          >
-            <template #headerRight>
-              <TogglePill v-model="stravaEnabled" />
-            </template>
-            <div class="strava-content">
-              <div class="strava-stats">
-                <span class="strava-distance">{{ stravaData.weeklyDistance }}</span>
-                <span class="strava-unit">km</span>
-              </div>
-              <div class="strava-target">
-                <span>Target: {{ stravaData.weeklyTarget }}km</span>
-              </div>
-              <MiniChart
-                :data="stravaData.weekData"
-                :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
-                color="#14B8A6"
-                gradient-start="rgba(20, 184, 166, 0.3)"
-                gradient-end="rgba(20, 184, 166, 0)"
-                :height="80"
-              />
-            </div>
-          </TileCard>
-
-          <!-- Tasks Tile -->
-          <TileCard
-            title="Today's Tasks"
-            :icon="ListChecks"
-            class="tile--tasks"
-            size="lg"
-          >
-            <template #headerRight>
-              <span class="task-count">{{ tasksCompleted }}/{{ totalTasks }}</span>
-            </template>
-            <div class="tasks-content">
-              <div
-                v-for="task in todayTasks"
-                :key="task.id"
-                class="task-item"
-                :class="{ 'task-item--completed': task.completed }"
-                @click="toggleTask(task.id)"
-              >
-                <div class="task-checkbox">
-                  <Check v-if="task.completed" :size="12" />
-                </div>
-                <span class="task-title">{{ task.title }}</span>
-              </div>
-              <button class="task-add">
-                <Plus :size="14" />
-                <span>Add task</span>
-              </button>
-            </div>
-          </TileCard>
-
-          <!-- Health Tile -->
-          <TileCard
-            title="Health"
-            :icon="Heart"
-            class="tile--health"
-            size="md"
-          >
-            <div class="health-content">
-              <div class="health-stat">
-                <ProgressRing :value="healthData.stepsPercent" :size="60">
-                  <Footprints :size="20" />
-                </ProgressRing>
-                <div class="health-stat-info">
-                  <span class="health-stat-value">{{ healthData.steps.toLocaleString() }}</span>
-                  <span class="health-stat-label">steps</span>
-                </div>
-              </div>
-              <div class="health-stat">
-                <ProgressRing :value="healthData.caloriesPercent" :size="60" color="#F97316">
-                  <Flame :size="20" />
-                </ProgressRing>
-                <div class="health-stat-info">
-                  <span class="health-stat-value">{{ healthData.calories }}</span>
-                  <span class="health-stat-label">cal</span>
-                </div>
-              </div>
-            </div>
-          </TileCard>
-
-          <!-- Bible Tile -->
-          <TileCard
-            title="Daily Reading"
-            :icon="BookOpen"
-            class="tile--bible"
-            size="md"
-          >
-            <div class="bible-content">
-              <p class="bible-reference">{{ bibleData.reference }}</p>
-              <p class="bible-version">NIV</p>
-              <div class="bible-actions">
-                <button class="bible-button bible-button--primary" @click="openBibleOnPhone">
-                  Open on Phone
-                </button>
-                <button
-                  class="bible-button"
-                  :class="{ 'bible-button--done': bibleData.completed }"
-                  @click="markBibleDone"
-                >
-                  {{ bibleData.completed ? 'Done ✓' : 'Mark Done' }}
-                </button>
-              </div>
-            </div>
-          </TileCard>
-        </div>
-
-        <!-- Row 3: Bottom Tiles -->
-        <div class="home-page__row home-page__row--bottom">
-          <!-- Energy Chart -->
-          <TileCard
-            title="Energy (KWH)"
-            class="tile--energy"
-            size="md"
-          >
-            <template #headerRight>
-              <ChipTabs
-                v-model="energyPeriod"
-                :tabs="[
-                  { value: 'weekly', label: 'Weekly' },
-                  { value: 'monthly', label: 'Monthly' },
-                ]"
-              />
-            </template>
-            <MiniChart
-              :data="[80, 120, 100, 140, 110, 130, 145]"
-              :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
-              :height="100"
+      <TopBar :display-name="displayName" @open-settings="showSettings = true">
+        <!-- Page Indicator Dots -->
+        <template #center>
+          <div class="page-dots">
+            <button
+              v-for="(section, index) in sections"
+              :key="section.id"
+              class="page-dot"
+              :class="{ 'page-dot--active': currentSectionIndex === index }"
+              @click="goToSection(index)"
             />
-          </TileCard>
+          </div>
+        </template>
+      </TopBar>
 
-          <!-- Weather Tile -->
-          <TileCard
-            class="tile--weather"
-            size="md"
-            :interactive="false"
-          >
-            <div class="weather-content">
-              <div class="weather-today">
-                <CloudSun :size="48" class="weather-icon" />
-                <div class="weather-temps">
-                  <span class="weather-high">24°</span>
-                  <span class="weather-divider">/</span>
-                  <span class="weather-low">17°</span>
-                </div>
-                <span class="weather-label">Today Temperature</span>
-              </div>
-              <div class="weather-week">
-                <div
-                  v-for="day in weatherForecast"
-                  :key="day.day"
-                  class="weather-day"
-                >
-                  <span class="weather-day-name">{{ day.day }}</span>
-                  <span class="weather-day-date">{{ day.date }}</span>
-                </div>
-              </div>
+      <!-- Swipeable Content Area -->
+      <div
+        ref="swipeContainer"
+        class="home-page__content"
+        @touchstart="handleTouchStart"
+        @touchmove="handleTouchMove"
+        @touchend="handleTouchEnd"
+      >
+        <!-- Tiles Grid (Home Section) -->
+        <div
+          class="home-page__grid"
+          :style="{ transform: `translateX(${-currentSectionIndex * 100}%)` }"
+        >
+          <!-- Section: Home -->
+          <div class="home-page__section">
+            <!-- Row 1: Spotify + AI Inbox -->
+            <div class="home-page__row home-page__row--top">
+              <!-- Spotify Now Playing -->
+              <SpotifyBar
+                :is-visible="spotifyData.isPlaying || mockMode"
+                :is-playing="spotifyData.isPlaying"
+                :track="spotifyData.track"
+                :artist="spotifyData.artist"
+                :album="spotifyData.album"
+                :album-art="spotifyData.albumArt"
+                :progress-ms="spotifyData.progressMs"
+                :duration-ms="spotifyData.durationMs"
+                class="tile--spotify"
+              />
+
+              <!-- AI Inbox Tile -->
+              <AIInboxTile
+                :suggestions="aiSuggestions"
+                next-suggestion-time="12:00"
+                class="tile--ai-inbox"
+                @accept="handleAIAccept"
+                @dismiss="handleAIDismiss"
+              />
             </div>
-          </TileCard>
+
+            <!-- Row 2: Main Tiles -->
+            <div class="home-page__row home-page__row--main">
+              <!-- Strava / Activity Tile -->
+              <TileCard title="Weekly Running" :icon="Activity" class="tile--strava" size="lg">
+                <template #headerRight>
+                  <TogglePill v-model="stravaEnabled" />
+                </template>
+                <div class="strava-content">
+                  <div class="strava-stats">
+                    <span class="strava-distance">{{ stravaData.weeklyDistance }}</span>
+                    <span class="strava-unit">km</span>
+                  </div>
+                  <div class="strava-target">
+                    <span>Target: {{ stravaData.weeklyTarget }}km</span>
+                  </div>
+                  <MiniChart
+                    :data="stravaData.weekData"
+                    :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+                    color="#14B8A6"
+                    gradient-start="rgba(20, 184, 166, 0.3)"
+                    gradient-end="rgba(20, 184, 166, 0)"
+                    :height="80"
+                  />
+                </div>
+              </TileCard>
+
+              <!-- Tasks Tile -->
+              <TileCard title="Today's Tasks" :icon="ListChecks" class="tile--tasks" size="lg">
+                <template #headerRight>
+                  <span class="task-count">{{ tasksCompleted }}/{{ totalTasks }}</span>
+                </template>
+                <div class="tasks-content">
+                  <div
+                    v-for="task in todayTasks"
+                    :key="task.id"
+                    class="task-item"
+                    :class="{ 'task-item--completed': task.completed }"
+                    @click="toggleTask(task.id)"
+                  >
+                    <div class="task-checkbox">
+                      <Check v-if="task.completed" :size="12" />
+                    </div>
+                    <span class="task-title">{{ task.title }}</span>
+                  </div>
+                  <button class="task-add">
+                    <Plus :size="14" />
+                    <span>Add task</span>
+                  </button>
+                </div>
+              </TileCard>
+
+              <!-- Health Tile -->
+              <TileCard title="Health" :icon="Heart" class="tile--health" size="md">
+                <div class="health-content">
+                  <div class="health-stat">
+                    <ProgressRing :value="healthData.stepsPercent" :size="60">
+                      <Footprints :size="20" />
+                    </ProgressRing>
+                    <div class="health-stat-info">
+                      <span class="health-stat-value">{{ healthData.steps.toLocaleString() }}</span>
+                      <span class="health-stat-label">steps</span>
+                    </div>
+                  </div>
+                  <div class="health-stat">
+                    <ProgressRing :value="healthData.caloriesPercent" :size="60" color="#F97316">
+                      <Flame :size="20" />
+                    </ProgressRing>
+                    <div class="health-stat-info">
+                      <span class="health-stat-value">{{ healthData.calories }}</span>
+                      <span class="health-stat-label">cal</span>
+                    </div>
+                  </div>
+                </div>
+              </TileCard>
+
+              <!-- Daily Reading (Bible) Tile -->
+              <TileCard title="Daily Reading" :icon="BookOpen" class="tile--bible" size="md">
+                <div class="bible-content">
+                  <p class="bible-reference">{{ verseData.reference }}</p>
+                  <p class="bible-text">{{ verseData.text }}</p>
+                  <div class="bible-actions">
+                    <button
+                      class="bible-button"
+                      :class="{ 'bible-button--done': verseData.completed }"
+                      @click="verseData.markDone()"
+                    >
+                      {{ verseData.completed ? 'Done' : 'Mark Done' }}
+                    </button>
+                  </div>
+                </div>
+              </TileCard>
+            </div>
+
+            <!-- Row 3: Bottom Tiles -->
+            <div class="home-page__row home-page__row--bottom">
+              <!-- Energy Chart -->
+              <TileCard title="Energy (KWH)" class="tile--energy" size="md">
+                <template #headerRight>
+                  <div class="energy-toggle">
+                    <button
+                      class="energy-toggle__btn"
+                      :class="{ 'energy-toggle__btn--active': energyPeriod === 'weekly' }"
+                      @click="energyPeriod = 'weekly'"
+                    >
+                      Weekly
+                    </button>
+                    <button
+                      class="energy-toggle__btn"
+                      :class="{ 'energy-toggle__btn--active': energyPeriod === 'monthly' }"
+                      @click="energyPeriod = 'monthly'"
+                    >
+                      Monthly
+                    </button>
+                  </div>
+                </template>
+                <MiniChart
+                  :data="[80, 120, 100, 140, 110, 130, 145]"
+                  :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+                  :height="100"
+                />
+              </TileCard>
+
+              <!-- Weather Tile -->
+              <TileCard class="tile--weather" size="md" :interactive="false">
+                <div class="weather-content">
+                  <div class="weather-today">
+                    <CloudSun :size="48" class="weather-icon" />
+                    <div class="weather-temps">
+                      <span class="weather-high">24°</span>
+                      <span class="weather-divider">/</span>
+                      <span class="weather-low">17°</span>
+                    </div>
+                    <span class="weather-label">Today Temperature</span>
+                  </div>
+                  <div class="weather-week">
+                    <div v-for="day in weatherForecast" :key="day.day" class="weather-day">
+                      <span class="weather-day-name">{{ day.day }}</span>
+                      <span class="weather-day-date">{{ day.date }}</span>
+                    </div>
+                  </div>
+                </div>
+              </TileCard>
+            </div>
+          </div>
+
+          <!-- Section: Health (placeholder) -->
+          <div class="home-page__section home-page__section--placeholder">
+            <div class="placeholder-content">
+              <Heart :size="48" />
+              <span>Health Section</span>
+            </div>
+          </div>
+
+          <!-- Section: Strava (placeholder) -->
+          <div class="home-page__section home-page__section--placeholder">
+            <div class="placeholder-content">
+              <Activity :size="48" />
+              <span>Strava Section</span>
+            </div>
+          </div>
+
+          <!-- Section: Tasks (placeholder) -->
+          <div class="home-page__section home-page__section--placeholder">
+            <div class="placeholder-content">
+              <ListChecks :size="48" />
+              <span>Tasks Section</span>
+            </div>
+          </div>
+
+          <!-- Section: Reading (placeholder) -->
+          <div class="home-page__section home-page__section--placeholder">
+            <div class="placeholder-content">
+              <BookOpen :size="48" />
+              <span>Reading Section</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -256,9 +255,6 @@ import {
   ListChecks,
   Heart,
   BookOpen,
-  Video,
-  Image,
-  ZoomIn,
   Check,
   Plus,
   Footprints,
@@ -268,34 +264,80 @@ import {
 import {
   Sidebar,
   TopBar,
-  ChipTabs,
   TileCard,
   SpotifyBar,
   MiniChart,
   ProgressRing,
   ModalSheet,
   TogglePill,
-  IconButton,
 } from '../components'
+import AIInboxTile from '../components/tiles/AIInboxTile.vue'
+import type { AISuggestion } from '../components/tiles/AIInboxTile.vue'
+import { useVerseOfDay } from '../composables/useVerseOfDay'
 
 // Config (will come from store/IPC later)
 const displayName = ref('Friend')
 const mockMode = true // Enable mock mode for development
 
-// Navigation
-const currentSection = ref('home')
-const showSettings = ref(false)
-
-const sectionTabs = [
-  { value: 'home', label: 'My Home' },
-  { value: 'living', label: 'Living Room' },
-  { value: 'bathroom', label: 'Bathroom' },
-  { value: 'office', label: 'Office' },
-  { value: 'kids', label: 'Kids Room' },
+// Navigation - Sections for swipe navigation
+const sections = [
+  { id: 'home', label: 'Home' },
+  { id: 'health', label: 'Health' },
+  { id: 'strava', label: 'Strava' },
+  { id: 'tasks', label: 'Tasks' },
+  { id: 'reading', label: 'Reading' },
 ]
 
+const currentSectionIndex = ref(0)
+const currentSection = computed(() => sections[currentSectionIndex.value]?.id ?? 'home')
+const showSettings = ref(false)
+
 function handleNavigate(route: string) {
-  currentSection.value = route
+  const index = sections.findIndex(s => s.id === route)
+  if (index !== -1) {
+    currentSectionIndex.value = index
+  }
+}
+
+function goToSection(index: number) {
+  currentSectionIndex.value = index
+}
+
+// Swipe handling
+const swipeContainer = ref<HTMLElement | null>(null)
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+const minSwipeDistance = 50
+
+function handleTouchStart(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (touch) {
+    touchStartX.value = touch.clientX
+  }
+}
+
+function handleTouchMove(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (touch) {
+    touchEndX.value = touch.clientX
+  }
+}
+
+function handleTouchEnd() {
+  const swipeDistance = touchStartX.value - touchEndX.value
+
+  if (Math.abs(swipeDistance) > minSwipeDistance) {
+    if (swipeDistance > 0 && currentSectionIndex.value < sections.length - 1) {
+      // Swipe left -> next section
+      currentSectionIndex.value++
+    } else if (swipeDistance < 0 && currentSectionIndex.value > 0) {
+      // Swipe right -> previous section
+      currentSectionIndex.value--
+    }
+  }
+
+  touchStartX.value = 0
+  touchEndX.value = 0
 }
 
 // Spotify Mock Data
@@ -308,6 +350,27 @@ const spotifyData = ref({
   progressMs: 45000,
   durationMs: 180000,
 })
+
+// AI Inbox Mock Data
+const aiSuggestions = ref<AISuggestion[]>([
+  {
+    id: '1',
+    title: 'Schedule gym session',
+    reason: 'Based on your fitness goals and free time tomorrow',
+  },
+  { id: '2', title: 'Call mom', reason: "It's been a week since your last call" },
+  { id: '3', title: 'Review budget', reason: 'Monthly review is due in 2 days' },
+])
+
+function handleAIAccept(id: string) {
+  console.log('Accepted suggestion:', id)
+  aiSuggestions.value = aiSuggestions.value.filter(s => s.id !== id)
+}
+
+function handleAIDismiss(id: string) {
+  console.log('Dismissed suggestion:', id)
+  aiSuggestions.value = aiSuggestions.value.filter(s => s.id !== id)
+}
 
 // Strava Mock Data
 const stravaEnabled = ref(true)
@@ -331,9 +394,7 @@ const todayTasks = ref<Task[]>([
   { id: '4', title: 'Meditate 10 minutes', completed: false },
 ])
 
-const tasksCompleted = computed(() =>
-  todayTasks.value.filter(t => t.completed).length
-)
+const tasksCompleted = computed(() => todayTasks.value.filter(t => t.completed).length)
 const totalTasks = computed(() => todayTasks.value.length)
 
 function toggleTask(id: string) {
@@ -352,20 +413,8 @@ const healthData = ref({
   sleepMinutes: 420,
 })
 
-// Bible Mock Data
-const bibleData = ref({
-  reference: 'Psalm 23:1-6',
-  completed: false,
-})
-
-function openBibleOnPhone() {
-  // Will trigger deep link or show QR
-  console.log('Open Bible on phone')
-}
-
-function markBibleDone() {
-  bibleData.value.completed = !bibleData.value.completed
-}
+// Daily Reading - Verse of the Day
+const verseData = useVerseOfDay()
 
 // Energy Chart
 const energyPeriod = ref('weekly')
@@ -397,16 +446,67 @@ const weatherForecast = [
   overflow: hidden;
 }
 
-.home-page__tabs {
-  margin-bottom: var(--space-md);
+/* Page Dots Navigation */
+.page-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-dot {
+  width: 8px;
+  height: 8px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  padding: 0;
+}
+
+.page-dot:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.page-dot--active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--color-blue);
+}
+
+/* Swipeable Content */
+.home-page__content {
+  flex: 1;
+  overflow: hidden;
+  touch-action: pan-x;
 }
 
 .home-page__grid {
-  flex: 1;
+  display: flex;
+  height: 100%;
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.home-page__section {
+  flex: 0 0 100%;
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   overflow-y: auto;
+}
+
+.home-page__section--placeholder {
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-lg);
 }
 
 .home-page__row {
@@ -416,103 +516,15 @@ const weatherForecast = [
 
 /* Top Row */
 .home-page__row--top {
-  min-height: 80px;
-}
-
-.tile--promo {
-  flex: 1;
-  min-height: auto;
-  padding: var(--space-sm) var(--space-md);
-}
-
-.promo-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 100%;
-}
-
-.promo-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.promo-title {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-}
-
-.promo-desc {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.promo-button {
-  padding: var(--space-xs) var(--space-md);
-  background: var(--color-blue);
-  border: none;
-  border-radius: var(--radius-chip);
-  color: var(--color-white);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-default);
-}
-
-.promo-button:hover {
-  background: var(--color-blue-dark);
+  min-height: 140px;
 }
 
 .tile--spotify {
   flex: 1.5;
 }
 
-.tile--camera {
+.tile--ai-inbox {
   flex: 1;
-  min-height: auto;
-  padding: var(--space-sm);
-}
-
-.camera-preview {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.camera-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-xs);
-}
-
-.camera-status {
-  font-size: var(--text-xs);
-  color: var(--color-green);
-}
-
-.camera-label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.camera-image {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--glass-dark);
-  border-radius: var(--radius-sm);
-  color: var(--text-tertiary);
-}
-
-.camera-controls {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-xs);
-  margin-top: var(--space-xs);
 }
 
 /* Main Row */
@@ -625,7 +637,7 @@ const weatherForecast = [
   color: var(--text-tertiary);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: 
+  transition:
     background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out);
 }
@@ -676,28 +688,33 @@ const weatherForecast = [
 .bible-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding-top: var(--space-md);
+  height: 100%;
+  padding-top: var(--space-xs);
 }
 
 .bible-reference {
-  font-size: var(--text-lg);
+  font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  margin: 0;
+  margin: 0 0 var(--space-xs) 0;
 }
 
-.bible-version {
+.bible-text {
   font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  margin-top: var(--space-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
 }
 
 .bible-actions {
   display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
+  justify-content: center;
+  margin-top: var(--space-sm);
 }
 
 .bible-button {
@@ -708,7 +725,7 @@ const weatherForecast = [
   color: var(--text-secondary);
   font-size: var(--text-sm);
   cursor: pointer;
-  transition: 
+  transition:
     background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out);
 }
@@ -716,16 +733,6 @@ const weatherForecast = [
 .bible-button:hover {
   background: rgba(255, 255, 255, 0.12);
   color: var(--text-primary);
-}
-
-.bible-button--primary {
-  background: var(--color-blue);
-  border-color: var(--color-blue);
-  color: var(--color-white);
-}
-
-.bible-button--primary:hover {
-  background: var(--color-blue-dark);
 }
 
 .bible-button--done {
@@ -741,6 +748,34 @@ const weatherForecast = [
 
 .tile--energy {
   flex: 2;
+}
+
+.energy-toggle {
+  display: flex;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-chip);
+  padding: 2px;
+}
+
+.energy-toggle__btn {
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-chip) - 2px);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.energy-toggle__btn:hover {
+  color: var(--text-secondary);
+}
+
+.energy-toggle__btn--active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
 }
 
 .tile--weather {

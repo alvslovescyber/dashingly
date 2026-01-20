@@ -5,12 +5,14 @@
       <h1 class="top-bar__greeting">Welcome, {{ displayName }}</h1>
     </div>
 
-    <!-- Center: Search -->
+    <!-- Center: Search or custom slot content -->
     <div class="top-bar__center">
-      <div class="top-bar__search">
-        <Search :size="15" :stroke-width="2" class="top-bar__search-icon" />
-        <span class="top-bar__search-placeholder">Search Here</span>
-      </div>
+      <slot name="center">
+        <div class="top-bar__search">
+          <Search :size="15" :stroke-width="2" class="top-bar__search-icon" />
+          <span class="top-bar__search-placeholder">Search Here</span>
+        </div>
+      </slot>
     </div>
 
     <!-- Right: Actions -->
@@ -80,7 +82,7 @@ defineEmits<{
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-inset-pill);
   cursor: pointer;
-  transition: 
+  transition:
     background-color var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out);
 }
@@ -115,11 +117,7 @@ defineEmits<{
   width: 38px;
   height: 38px;
   margin-left: 6px;
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.06) 100%
-  );
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   color: var(--text-secondary);
