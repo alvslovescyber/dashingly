@@ -1,0 +1,82 @@
+{
+  "name": "glasspi-dashboard",
+  "productName": "GlassPi Dashboard",
+  "version": "1.0.0",
+  "description": "A production-quality kiosk dashboard for Raspberry Pi with glassmorphic UI",
+  "private": true,
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build && electron-builder",
+    "build:linux": "vue-tsc && vite build && electron-builder --linux",
+    "build:linux-arm64": "vue-tsc && vite build && electron-builder --linux --arm64",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "better-sqlite3": "^11.1.2",
+    "zod": "^3.23.8",
+    "chart.js": "^4.4.3",
+    "lucide-vue-next": "^0.395.0",
+    "express": "^4.19.2",
+    "openai": "^4.52.0",
+    "qrcode": "^1.5.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@types/better-sqlite3": "^7.6.10",
+    "@types/express": "^4.17.21",
+    "@types/qrcode": "^1.5.5",
+    "@types/node": "^20.14.9",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.6",
+    "vue-tsc": "^2.0.26",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "vite-plugin-electron": "^0.28.6",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "tailwindcss": "^3.4.4",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19"
+  },
+  "build": {
+    "appId": "com.glasspi.dashboard",
+    "productName": "GlassPi Dashboard",
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "Utility"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      },
+      {
+        "from": "config",
+        "to": "config",
+        "filter": [
+          "*.example.json"
+        ]
+      }
+    ]
+  }
+}
