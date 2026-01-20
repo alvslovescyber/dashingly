@@ -111,6 +111,8 @@ function handleClick() {
 
 .tile-card--interactive:active {
   transform: scale(0.98);
+  box-shadow: var(--shadow-tile);
+  transition-duration: 50ms;
 }
 
 /* Size Variants */

@@ -167,22 +167,25 @@ function handleDismiss(id: string) {
   transform: scale(0.92);
 }
 
+/* Desaturated colors so buttons don't steal attention from task titles */
 .ai-inbox-btn--accept {
-  background: rgba(34, 197, 94, 0.15);
-  color: var(--color-green);
+  background: rgba(34, 197, 94, 0.1);
+  color: rgba(34, 197, 94, 0.75);
 }
 
 .ai-inbox-btn--accept:hover {
-  background: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.18);
+  color: var(--color-green);
 }
 
 .ai-inbox-btn--dismiss {
-  background: rgba(239, 68, 68, 0.12);
-  color: var(--color-red);
+  background: rgba(239, 68, 68, 0.08);
+  color: rgba(239, 68, 68, 0.7);
 }
 
 .ai-inbox-btn--dismiss:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-red);
 }
 
 /* Empty State */

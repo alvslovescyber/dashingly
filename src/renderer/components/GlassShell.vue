@@ -20,7 +20,10 @@
   -webkit-backdrop-filter: blur(18px) saturate(120%);
   border-radius: var(--radius-glass);
   border: var(--border-shell);
-  box-shadow: var(--shadow-shell);
+  /* Machined glass: outer shadow + inner top highlight */
+  box-shadow:
+    var(--shadow-shell),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 

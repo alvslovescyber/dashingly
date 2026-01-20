@@ -1,9 +1,21 @@
 import { app, BrowserWindow, ipcMain, safeStorage } from 'electron'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { initDatabase, closeDatabase, getSetting, setSetting } from '../src/main/db/database'
+import { getDashboardSnapshot } from '../src/main/db/snapshot'
+import { seedDatabase } from '../src/main/db/seed'
+import {
+  completeTask,
+  createTask,
+  updateTask,
+  deleteTask,
+  acceptSuggestion,
+  dismissSuggestion,
+  markBibleComplete,
+  getSettingValue,
+  setSettingValue,
+} from '../src/main/db/actions'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // App root directory
@@ -92,16 +104,7 @@ function createWindow() {
 function setupIPC() {
   // Get dashboard snapshot (main data fetch)
   ipcMain.handle('get-dashboard-snapshot', async () => {
-    // TODO: Implement database query
-    return {
-      displayName: 'Friend',
-      tasks: [],
-      strava: null,
-      health: null,
-      spotify: null,
-      bible: null,
-      lastSync: {},
-    }
+    return getDashboardSnapshot()
   })
 
   // Check if safe storage is available
@@ -118,10 +121,74 @@ function setupIPC() {
       isKiosk: IS_PI,
     }
   })
+
+  // Seed database (dev only)
+  ipcMain.handle('seed-database', async () => {
+    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+    if (!isDev) {
+      throw new Error('Seeding is only available in development mode')
+    }
+    seedDatabase()
+    return { success: true }
+  })
+
+  // Settings
+  ipcMain.handle('get-setting', async (_event, key: string) => {
+    return getSettingValue(key, null)
+  })
+
+  ipcMain.handle('set-setting', async (_event, key: string, value: unknown) => {
+    setSettingValue(key, value)
+  })
+
+  // Task actions
+  ipcMain.handle('complete-task', async (_event, taskId: string) => {
+    completeTask(taskId)
+  })
+
+  ipcMain.handle('create-task', async (_event, task: { title: string; type?: 'daily' | 'oneoff' }) => {
+    return createTask(task.title, task.type)
+  })
+
+  ipcMain.handle('update-task', async (_event, id: string, updates: { title?: string; type?: string; isActive?: boolean }) => {
+    updateTask(id, updates)
+  })
+
+  ipcMain.handle('delete-task', async (_event, id: string) => {
+    deleteTask(id)
+  })
+
+  // AI Suggestion actions
+  ipcMain.handle('accept-suggestion', async (_event, id: string) => {
+    acceptSuggestion(id)
+  })
+
+  ipcMain.handle('dismiss-suggestion', async (_event, id: string) => {
+    dismissSuggestion(id)
+  })
+
+  // Bible actions
+  ipcMain.handle('mark-bible-complete', async () => {
+    markBibleComplete()
+  })
 }
 
 // App lifecycle
 app.whenReady().then(() => {
+  // Initialize database before anything else
+  initDatabase()
+
+  // Auto-seed in development if database is empty
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+  if (isDev) {
+    const hasSeeded = getSetting<boolean>('_hasSeeded', false)
+    if (!hasSeeded) {
+      console.log('First run in dev mode - seeding database with demo data...')
+      seedDatabase()
+      setSetting('_hasSeeded', true)
+    }
+  }
+
   setupIPC()
   createWindow()
 
@@ -133,6 +200,9 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  // Close database before quitting
+  closeDatabase()
+
   if (process.platform !== 'darwin') {
     app.quit()
     mainWindow = null

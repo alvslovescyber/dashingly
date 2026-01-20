@@ -40,7 +40,7 @@
             <div class="home-page__row home-page__row--top">
               <!-- Spotify Now Playing -->
               <SpotifyBar
-                :is-visible="spotifyData.isPlaying || mockMode"
+                :is-visible="spotifyData.isPlaying || spotifyData.connected"
                 :is-playing="spotifyData.isPlaying"
                 :track="spotifyData.track"
                 :artist="spotifyData.artist"
@@ -282,12 +282,23 @@ import {
   TogglePill,
 } from '../components'
 import AIInboxTile from '../components/tiles/AIInboxTile.vue'
-import type { AISuggestion } from '../components/tiles/AIInboxTile.vue'
+import { useDashboard } from '../composables/useDashboard'
 import { useVerseOfDay } from '../composables/useVerseOfDay'
 
-// Config (will come from store/IPC later)
-const displayName = ref('Friend')
-const mockMode = true // Enable mock mode for development
+// Dashboard data from main process
+const {
+  displayName,
+  todayTasks,
+  tasksCompleted,
+  totalTasks,
+  aiSuggestions,
+  stravaData,
+  healthData,
+  spotifyData,
+  completeTask,
+  acceptSuggestion,
+  dismissSuggestion,
+} = useDashboard()
 
 // Navigation - Sections for swipe navigation
 const sections = [
@@ -301,6 +312,7 @@ const sections = [
 const currentSectionIndex = ref(0)
 const currentSection = computed(() => sections[currentSectionIndex.value]?.id ?? 'home')
 const showSettings = ref(false)
+const stravaEnabled = ref(true)
 
 function handleNavigate(route: string) {
   const index = sections.findIndex(s => s.id === route)
@@ -350,80 +362,21 @@ function handleTouchEnd() {
   touchEndX.value = 0
 }
 
-// Spotify Mock Data
-const spotifyData = ref({
-  isPlaying: true,
-  track: 'Be Honest',
-  artist: 'Jorja Smith ft Burna Boy',
-  album: 'Lost & Found',
-  albumArt: '',
-  progressMs: 45000,
-  durationMs: 180000,
-})
-
-// AI Inbox Mock Data
-const aiSuggestions = ref<AISuggestion[]>([
-  {
-    id: '1',
-    title: 'Schedule gym session',
-    reason: 'Based on your fitness goals and free time tomorrow',
-  },
-  { id: '2', title: 'Call mom', reason: "It's been a week since your last call" },
-  { id: '3', title: 'Review budget', reason: 'Monthly review is due in 2 days' },
-])
-
+// AI Inbox handlers
 function handleAIAccept(id: string) {
-  console.log('Accepted suggestion:', id)
-  aiSuggestions.value = aiSuggestions.value.filter(s => s.id !== id)
+  acceptSuggestion(id)
 }
 
 function handleAIDismiss(id: string) {
-  console.log('Dismissed suggestion:', id)
-  aiSuggestions.value = aiSuggestions.value.filter(s => s.id !== id)
+  dismissSuggestion(id)
 }
 
-// Strava Mock Data
-const stravaEnabled = ref(true)
-const stravaData = ref({
-  weeklyDistance: 23.4,
-  weeklyTarget: 30,
-  weekData: [3.2, 5.1, 0, 4.8, 6.2, 2.1, 2.0],
-})
-
-// Tasks Mock Data
-interface Task {
-  id: string
-  title: string
-  completed: boolean
-}
-
-const todayTasks = ref<Task[]>([
-  { id: '1', title: 'Morning run - 5km', completed: true },
-  { id: '2', title: 'Read Bible passage', completed: false },
-  { id: '3', title: 'Review weekly goals', completed: false },
-  { id: '4', title: 'Meditate 10 minutes', completed: false },
-])
-
-const tasksCompleted = computed(() => todayTasks.value.filter(t => t.completed).length)
-const totalTasks = computed(() => todayTasks.value.length)
-
+// Task toggle handler
 function toggleTask(id: string) {
-  const task = todayTasks.value.find(t => t.id === id)
-  if (task) {
-    task.completed = !task.completed
-  }
+  completeTask(id)
 }
 
-// Health Mock Data
-const healthData = ref({
-  steps: 7842,
-  stepsPercent: 78,
-  calories: 423,
-  caloriesPercent: 56,
-  sleepMinutes: 420,
-})
-
-// Daily Reading - Verse of the Day
+// Daily Reading - Verse of the Day (from local JSON for now)
 const verseData = useVerseOfDay()
 
 // Computed verse parts for better text hierarchy
@@ -443,7 +396,7 @@ const verseRest = computed(() => {
 // Energy Chart
 const energyPeriod = ref('weekly')
 
-// Weather Mock Data
+// Weather Mock Data (to be wired up later)
 const weatherForecast = [
   { day: 'S', date: '17' },
   { day: 'M', date: '20' },
@@ -728,9 +681,9 @@ const weatherForecast = [
 
 .bible-reference {
   font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  opacity: 0.95;
+  font-weight: var(--font-bold);
+  color: var(--color-white);
+  letter-spacing: -0.01em;
   margin: 0 0 var(--space-sm) 0;
 }
 
@@ -745,9 +698,9 @@ const weatherForecast = [
 
 .bible-verse__main {
   font-size: var(--text-sm);
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text-primary);
-  opacity: 0.9;
+  font-style: italic;
 }
 
 .bible-verse__rest {

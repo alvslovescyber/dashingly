@@ -16,7 +16,8 @@
     "lint": "eslint . --ext .vue,.ts,.tsx --fix",
     "lint:check": "eslint . --ext .vue,.ts,.tsx",
     "format": "prettier --write \"src/**/*.{vue,ts,tsx,css,json}\"",
-    "format:check": "prettier --check \"src/**/*.{vue,ts,tsx,css,json}\""
+    "format:check": "prettier --check \"src/**/*.{vue,ts,tsx,css,json}\"",
+    "db:seed": "npx tsx src/main/db/seed.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.1.2",

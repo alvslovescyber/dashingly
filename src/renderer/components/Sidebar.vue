@@ -143,11 +143,13 @@ const navItems = [
   color: var(--text-primary);
 }
 
-/* ACTIVE = brighter + background pill + glow */
+/* ACTIVE = brighter + background pill + glow + inner highlight */
 .sidebar__item--active {
   background: var(--glass-active);
   color: var(--color-blue-light);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
+  box-shadow:
+    0 0 12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .sidebar__item:active {
