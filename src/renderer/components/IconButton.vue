@@ -3,7 +3,7 @@
     class="icon-button"
     :class="[`icon-button--${size}`, `icon-button--${variant}`, { 'icon-button--active': active }]"
     :disabled="disabled"
-    @click="$emit('click')"
+    @click="handleClick"
   >
     <component :is="icon" :size="iconSize" :stroke-width="1.75" />
   </button>
@@ -27,9 +27,14 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
 })
 
-defineEmits<{
-  click: []
+const emit = defineEmits<{
+  (e: 'click', event: MouseEvent): void
 }>()
+
+function handleClick(event: MouseEvent) {
+  event.stopPropagation()
+  emit('click', event)
+}
 
 const iconSize = computed(() => {
   const sizeMap = { sm: 15, md: 18, lg: 22 }

@@ -36,6 +36,7 @@ interface Props {
   gradientEnd?: string
   showPoints?: boolean
   height?: number
+  smartScale?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -44,6 +45,7 @@ const props = withDefaults(defineProps<Props>(), {
   gradientEnd: 'rgba(59, 130, 246, 0)',
   showPoints: false,
   height: 80,
+  smartScale: true,
 })
 
 const chartContainer = ref<HTMLElement>()
@@ -119,7 +121,13 @@ function createChart() {
         y: {
           display: false,
           grid: { display: false },
-          min: 0,
+          ...(props.smartScale
+            ? {
+                grace: '10%', // Add 10% padding to top/bottom
+              }
+            : {
+                min: 0,
+              }),
         },
       },
       elements: {
@@ -147,7 +155,24 @@ function createChart() {
   })
 }
 
-watch(() => props.data, createChart, { deep: true })
+function refreshChart() {
+  if (!chart) {
+    createChart()
+    return
+  }
+
+  chart.data.labels = props.labels || props.data.map((_, i) => String(i))
+  chart.data.datasets[0].data = props.data
+  chart.update()
+}
+
+watch(
+  () => [props.data, props.labels],
+  () => {
+    refreshChart()
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   createChart()

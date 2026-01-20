@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=800, height=480, user-scalable=no" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="GlassPi Dashboard - Smart Home Kiosk" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        img-src 'self' https: data: blob:;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        script-src 'self';
+        connect-src 'self' http://localhost:* ws://localhost:* https:;
+        font-src 'self' data: https://fonts.gstatic.com;
+      "
+    />
     <title>GlassPi Dashboard</title>
 
     <!-- Prevent zoom on touch devices -->
@@ -15,10 +27,7 @@
 
     <!-- iOS specific -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <div id="app"></div>

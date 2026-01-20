@@ -10,13 +10,19 @@ import type {
   SpotifyStatus,
   BibleStatus,
   Settings,
+  WeatherStatus,
 } from '../../shared/types'
+import {
+  getWeatherStatus,
+  getDefaultWeatherSettings,
+  getWeatherSettings,
+} from '../integrations/weather'
 
 /**
  * Get the complete dashboard snapshot in a single query
  * This is the main IPC call for the renderer to get all data
  */
-export function getDashboardSnapshot(): DashboardSnapshot {
+export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   const db = getDatabase()
   const today = getTodayLogicalDay()
   const weekDays = getWeekLogicalDays(today)
@@ -26,7 +32,12 @@ export function getDashboardSnapshot(): DashboardSnapshot {
   const timezone = getSetting<string>('timezone', 'America/New_York')
 
   // Settings
-  const settings = getSetting<Settings>('settings', getDefaultSettings())
+  const storedSettings = getSetting<Settings>('settings', getDefaultSettings())
+  const weatherSettings = getWeatherSettings()
+  const settings: Settings = {
+    ...storedSettings,
+    weather: storedSettings.weather ?? weatherSettings,
+  }
 
   // Tasks
   const tasks = db
@@ -121,12 +132,16 @@ export function getDashboardSnapshot(): DashboardSnapshot {
   // Bible status
   const bible = getBibleStatus(today)
 
+  // Weather status
+  const weather: WeatherStatus | null = await getWeatherStatus()
+
   // Last sync times
   const lastSync = {
     strava: getLastSync('strava') ?? undefined,
     health: getLastSync('health') ?? undefined,
     spotify: getLastSync('spotify') ?? undefined,
     ai: getLastSync('ai_suggestions') ?? undefined,
+    weather: getLastSync('weather') ?? undefined,
   }
 
   return {
@@ -140,6 +155,7 @@ export function getDashboardSnapshot(): DashboardSnapshot {
     health,
     spotify,
     bible,
+    weather,
     lastSync,
   }
 }
@@ -164,6 +180,7 @@ function getDefaultSettings(): Settings {
       soundEnabled: true,
       quietHoursEnabled: true,
     },
+    weather: getDefaultWeatherSettings(),
   }
 }
 

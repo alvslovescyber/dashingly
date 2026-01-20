@@ -14,15 +14,21 @@ const snapshot = ref<DashboardSnapshot | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const lastFetch = ref<number>(0)
-
-// Cache duration (5 seconds - short for responsiveness)
 const CACHE_DURATION = 5000
+const SNAPSHOT_POLL_INTERVAL = 60_000
+let pollTimer: ReturnType<typeof setInterval> | null = null
 
 /**
  * Composable for accessing dashboard data from the main process
  * Returns reactive references to all dashboard sections
  */
 export function useDashboard() {
+  function ensurePolling() {
+    if (pollTimer) return
+    pollTimer = setInterval(() => {
+      fetchSnapshot(true).catch(error => console.error('Periodic dashboard refresh failed:', error))
+    }, SNAPSHOT_POLL_INTERVAL)
+  }
   // Fetch snapshot from main process
   async function fetchSnapshot(force = false): Promise<void> {
     // Skip if recently fetched (unless forced)
@@ -50,11 +56,13 @@ export function useDashboard() {
     if (!snapshot.value) {
       fetchSnapshot()
     }
+    ensurePolling()
   })
 
   // User info
   const displayName = computed(() => snapshot.value?.displayName ?? 'Friend')
   const timezone = computed(() => snapshot.value?.timezone ?? 'America/New_York')
+  const settings = computed(() => snapshot.value?.settings)
 
   // Tasks
   const tasks = computed<Task[]>(() => snapshot.value?.tasks ?? [])
@@ -92,7 +100,7 @@ export function useDashboard() {
     connected: strava.value?.connected ?? false,
     weeklyDistance: strava.value?.weeklyDistance ?? 0,
     weeklyTarget: strava.value?.weeklyTarget ?? 30,
-    weekData: strava.value?.weekData ?? [0, 0, 0, 0, 0, 0, 0],
+    weekData: [...(strava.value?.weekData ?? [0, 0, 0, 0, 0, 0, 0])],
   }))
 
   // Health
@@ -127,6 +135,18 @@ export function useDashboard() {
     reference: bible.value?.todayReference ?? 'No reading scheduled',
     completed: bible.value?.completed ?? false,
     dayIndex: bible.value?.dayIndex ?? 0,
+  }))
+
+  // Weather
+  const weatherData = computed(() => ({
+    location: snapshot.value?.weather?.locationName ?? settings.value?.weather?.cityName ?? '—',
+    temperature: snapshot.value?.weather?.temperature ?? null,
+    high: snapshot.value?.weather?.high ?? null,
+    low: snapshot.value?.weather?.low ?? null,
+    condition: snapshot.value?.weather?.condition ?? '—',
+    icon: snapshot.value?.weather?.icon ?? 'cloud',
+    lastUpdated: snapshot.value?.weather?.lastUpdated ?? null,
+    forecast: snapshot.value?.weather?.forecast ?? [],
   }))
 
   // Last sync times
@@ -169,6 +189,15 @@ export function useDashboard() {
     }
   }
 
+  async function createTask(payload: { title: string; type?: 'daily' | 'oneoff' }): Promise<void> {
+    try {
+      await window.electronAPI.createTask(payload)
+      await fetchSnapshot(true)
+    } catch (e) {
+      console.error('Failed to create task:', e)
+    }
+  }
+
   return {
     // State
     loading,
@@ -178,6 +207,7 @@ export function useDashboard() {
     // User
     displayName,
     timezone,
+    settings,
 
     // Tasks
     tasks,
@@ -205,6 +235,7 @@ export function useDashboard() {
     // Bible
     bible,
     bibleData,
+    weatherData,
 
     // Sync
     lastSync,
@@ -212,6 +243,7 @@ export function useDashboard() {
     // Actions
     fetchSnapshot,
     completeTask,
+    createTask,
     acceptSuggestion,
     dismissSuggestion,
     markBibleComplete,

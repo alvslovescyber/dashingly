@@ -40,7 +40,7 @@
             <div class="home-page__row home-page__row--top">
               <!-- Spotify Now Playing -->
               <SpotifyBar
-                :is-visible="spotifyData.isPlaying || spotifyData.connected"
+                :is-visible="shouldShowSpotify"
                 :is-playing="spotifyData.isPlaying"
                 :track="spotifyData.track"
                 :artist="spotifyData.artist"
@@ -58,6 +58,7 @@
                 class="tile--ai-inbox"
                 @accept="handleAIAccept"
                 @dismiss="handleAIDismiss"
+                @view-all="showAISuggestionsModal = true"
               />
             </div>
 
@@ -94,7 +95,7 @@
                 </template>
                 <div class="tasks-content">
                   <div
-                    v-for="task in todayTasks"
+                    v-for="task in displayedTasks"
                     :key="task.id"
                     class="task-item"
                     :class="{ 'task-item--completed': task.completed }"
@@ -105,9 +106,17 @@
                     </div>
                     <span class="task-title">{{ task.title }}</span>
                   </div>
-                  <button class="task-add">
+                  <button class="task-add" type="button" @click.stop="showAddTaskModal = true">
                     <Plus :size="14" />
                     <span>Add task</span>
+                  </button>
+                  <button
+                    v-if="hasMoreTasks"
+                    class="task-view-all"
+                    type="button"
+                    @click.stop="showAllTasksModal = true"
+                  >
+                    View all
                   </button>
                 </div>
               </TileCard>
@@ -144,7 +153,7 @@
                 size="md"
               >
                 <div class="bible-content">
-                  <p class="bible-reference">{{ verseData.reference }}</p>
+                  <p class="bible-reference">{{ currentReference }}</p>
                   <p class="bible-verse">
                     <span class="bible-verse__main">"{{ verseMain }}"</span>
                     <span v-if="verseRest" class="bible-verse__rest">
@@ -154,10 +163,10 @@
                   <div class="bible-actions">
                     <button
                       class="bible-button"
-                      :class="{ 'bible-button--done': verseData.completed }"
-                      @click="verseData.markDone()"
+                      :class="{ 'bible-button--done': isBibleCompleted }"
+                      @click="handleBibleAction"
                     >
-                      {{ verseData.completed ? 'Done' : 'Mark Done' }}
+                      {{ isBibleCompleted ? 'Done' : 'Mark Done' }}
                     </button>
                   </div>
                 </div>
@@ -187,40 +196,105 @@
                   </div>
                 </template>
                 <MiniChart
-                  :data="[80, 120, 100, 140, 110, 130, 145]"
-                  :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+                  :data="energyChart.data"
+                  :labels="energyChart.labels"
                   :height="100"
                 />
               </TileCard>
 
               <!-- Weather Tile -->
               <TileCard class="tile--weather" size="md" :interactive="false">
+                <template #headerRight>
+                  <button class="weather-settings-btn" type="button" @click.stop="showSettings = true">
+                    <SettingsIcon :size="16" />
+                  </button>
+                </template>
                 <div class="weather-content">
                   <div class="weather-today">
-                    <CloudSun :size="48" class="weather-icon" />
+                    <component :is="weatherIcon" :size="48" class="weather-icon" />
                     <div class="weather-temps">
-                      <span class="weather-high">24°</span>
-                      <span class="weather-divider">/</span>
-                      <span class="weather-low">17°</span>
+                      <span class="weather-current">
+                        {{ formatTemperature(weatherData.temperature) }}
+                      </span>
+                      <div class="weather-range">
+                        <span>{{ formatTemperature(weatherData.high) }}</span>
+                        <span class="weather-divider">/</span>
+                        <span>{{ formatTemperature(weatherData.low) }}</span>
+                      </div>
                     </div>
-                    <span class="weather-label">Today Temperature</span>
+                    <span class="weather-label">{{ weatherData.condition }}</span>
+                    <span class="weather-location">{{ weatherData.location }}</span>
                   </div>
                   <div class="weather-week">
-                    <div v-for="day in weatherForecast" :key="day.day" class="weather-day">
+                    <div v-for="day in formattedForecast" :key="day.day" class="weather-day">
                       <span class="weather-day-name">{{ day.day }}</span>
-                      <span class="weather-day-date">{{ day.date }}</span>
+                      <span class="weather-day-date">{{ formatTemperature(day.high) }}</span>
+                      <span class="weather-day-low">{{ formatTemperature(day.low) }}</span>
                     </div>
                   </div>
+                  <span class="weather-updated">Updated {{ weatherUpdatedLabel }}</span>
                 </div>
               </TileCard>
             </div>
           </div>
 
-          <!-- Section: Health (placeholder) -->
-          <div class="home-page__section home-page__section--placeholder">
-            <div class="placeholder-content">
-              <Heart :size="48" />
-              <span>Health Section</span>
+          <!-- Section: Health -->
+          <div class="home-page__section home-page__section--health">
+            <div class="health-page">
+              <div class="health-hero-card">
+                <div class="health-hero-card__ring">
+                  <ProgressRing :value="healthData.stepsPercent" :size="120">
+                    <Footprints :size="32" />
+                  </ProgressRing>
+                  <div class="health-hero-card__stat">
+                    <span class="health-hero-card__value">
+                      {{ healthData.steps.toLocaleString() }}
+                    </span>
+                    <span class="health-hero-card__label">steps today</span>
+                  </div>
+                </div>
+                <div class="health-hero-card__meta">
+                  <div>
+                    <span class="health-meta__label">Active calories</span>
+                    <p class="health-meta__value">{{ healthData.calories }}</p>
+                  </div>
+                  <div>
+                    <span class="health-meta__label">Sleep minutes</span>
+                    <p class="health-meta__value">{{ healthData.sleepMinutes }}</p>
+                  </div>
+                </div>
+                <div class="health-sync" :class="{ 'health-sync--warning': healthData.warningDays }">
+                  <span>Last synced {{ healthSyncLabel }}</span>
+                  <span v-if="healthData.warningDays">Reconnect Health source</span>
+                </div>
+              </div>
+
+              <div class="health-trends">
+                <div class="health-trend-card">
+                  <div class="health-trend-card__header">
+                    <span>Steps · 7 days</span>
+                    <span class="health-trend-card__value">{{ latestHealthSteps }}</span>
+                  </div>
+                  <MiniChart
+                    :data="healthTrend"
+                    :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+                    color="#34d399"
+                    gradient-start="rgba(52, 211, 153, 0.18)"
+                  />
+                </div>
+                <div class="health-trend-card">
+                  <div class="health-trend-card__header">
+                    <span>Sleep minutes</span>
+                    <span class="health-trend-card__value">{{ latestSleepMinutes }}</span>
+                  </div>
+                  <MiniChart
+                    :data="sleepTrend"
+                    :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+                    color="#60a5fa"
+                    gradient-start="rgba(96, 165, 250, 0.2)"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -251,15 +325,156 @@
       </div>
     </div>
 
+    <!-- Add Task Modal -->
+    <ModalSheet v-model="showAddTaskModal" title="Add Task">
+      <form class="task-form" @submit.prevent="submitTask">
+        <label class="form-label">
+          Title
+          <input
+            v-model="newTaskTitle"
+            class="form-input"
+            type="text"
+            name="title"
+            placeholder="What do you need to remember?"
+            required
+          />
+        </label>
+
+        <label class="form-label">
+          Type
+          <div class="task-type-buttons">
+            <button
+              type="button"
+              class="task-type-btn"
+              :class="{ 'task-type-btn--active': newTaskType === 'daily' }"
+              @click="newTaskType = 'daily'"
+            >
+              Daily
+            </button>
+            <button
+              type="button"
+              class="task-type-btn"
+              :class="{ 'task-type-btn--active': newTaskType === 'oneoff' }"
+              @click="newTaskType = 'oneoff'"
+            >
+              One-off
+            </button>
+          </div>
+        </label>
+
+        <p v-if="taskError" class="form-error">{{ taskError }}</p>
+        <button class="form-submit" type="submit" :disabled="taskSaving">
+          {{ taskSaving ? 'Saving...' : 'Save Task' }}
+        </button>
+      </form>
+    </ModalSheet>
+
+    <!-- All Tasks Modal -->
+    <ModalSheet v-model="showAllTasksModal" title="Today's Tasks">
+      <div class="task-modal-list">
+        <div
+          v-for="task in todayTasks"
+          :key="task.id"
+          class="task-item"
+          :class="{ 'task-item--completed': task.completed }"
+          @click="toggleTask(task.id)"
+        >
+          <div class="task-checkbox">
+            <Check v-if="task.completed" :size="12" />
+          </div>
+          <span class="task-title">{{ task.title }}</span>
+        </div>
+      </div>
+    </ModalSheet>
+
+    <!-- AI Suggestions Modal -->
+    <ModalSheet v-model="showAISuggestionsModal" title="AI Suggestions">
+      <div v-if="pendingAISuggestions.length > 0" class="ai-modal-list">
+        <div v-for="suggestion in pendingAISuggestions" :key="suggestion.id" class="ai-modal-item">
+          <div class="ai-modal-body">
+            <p class="ai-modal-title">{{ suggestion.title }}</p>
+            <p class="ai-modal-reason">{{ suggestion.reason }}</p>
+          </div>
+          <div class="ai-modal-actions">
+            <button @click="handleAIAccept(suggestion.id)">Accept</button>
+            <button @click="handleAIDismiss(suggestion.id)">Dismiss</button>
+          </div>
+        </div>
+      </div>
+      <p v-else class="ai-modal-empty">No suggestions right now.</p>
+    </ModalSheet>
+
     <!-- Settings Modal -->
-    <ModalSheet v-model="showSettings" title="Settings" size="lg">
-      <p>Settings content goes here...</p>
+    <ModalSheet v-model="showSettings" title="Weather Settings" size="md">
+      <div class="settings-section">
+        <span class="form-label">Location Mode</span>
+        <div class="settings-radio-group">
+          <label>
+            <input
+              v-model="weatherForm.locationMode"
+              type="radio"
+              value="city"
+              name="locationMode"
+            />
+            City
+          </label>
+          <label>
+            <input
+              v-model="weatherForm.locationMode"
+              type="radio"
+              value="latlon"
+              name="locationMode"
+            />
+            Latitude/Longitude
+          </label>
+        </div>
+
+        <label v-if="weatherForm.locationMode === 'city'" class="form-label">
+          City
+          <input
+            v-model="weatherForm.cityName"
+            class="form-input"
+            type="text"
+            placeholder="Chicago"
+          />
+        </label>
+
+        <div v-else class="coordinates-grid">
+          <label class="form-label">
+            Latitude
+            <input
+              v-model.number="weatherForm.latitude"
+              class="form-input"
+              type="number"
+              step="0.01"
+              placeholder="41.88"
+            />
+          </label>
+          <label class="form-label">
+            Longitude
+            <input
+              v-model.number="weatherForm.longitude"
+              class="form-input"
+              type="number"
+              step="0.01"
+              placeholder="-87.62"
+            />
+          </label>
+        </div>
+
+        <p v-if="loadingWeatherSettings" class="settings-note">Loading current settings...</p>
+        <p v-if="weatherSettingsError" class="form-error">{{ weatherSettingsError }}</p>
+
+        <button class="form-submit" type="button" :disabled="savingWeatherSettings" @click="saveWeatherSettings">
+          {{ savingWeatherSettings ? 'Saving...' : 'Save Settings' }}
+        </button>
+      </div>
     </ModalSheet>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   Activity,
   ListChecks,
@@ -270,6 +485,13 @@ import {
   Footprints,
   Flame,
   CloudSun,
+  Cloud,
+  Sun,
+  CloudRain,
+  CloudSnow,
+  CloudLightning,
+  CloudFog,
+  Settings as SettingsIcon,
 } from 'lucide-vue-next'
 import {
   Sidebar,
@@ -284,6 +506,7 @@ import {
 import AIInboxTile from '../components/tiles/AIInboxTile.vue'
 import { useDashboard } from '../composables/useDashboard'
 import { useVerseOfDay } from '../composables/useVerseOfDay'
+import type { WeatherSettings } from '@shared/types'
 
 // Dashboard data from main process
 const {
@@ -295,9 +518,15 @@ const {
   stravaData,
   healthData,
   spotifyData,
+  bibleData,
+  lastSync,
+  weatherData,
   completeTask,
   acceptSuggestion,
   dismissSuggestion,
+  markBibleComplete,
+  createTask,
+  fetchSnapshot,
 } = useDashboard()
 
 // Navigation - Sections for swipe navigation
@@ -312,6 +541,9 @@ const sections = [
 const currentSectionIndex = ref(0)
 const currentSection = computed(() => sections[currentSectionIndex.value]?.id ?? 'home')
 const showSettings = ref(false)
+const showAddTaskModal = ref(false)
+const showAllTasksModal = ref(false)
+const showAISuggestionsModal = ref(false)
 const stravaEnabled = ref(true)
 
 function handleNavigate(route: string) {
@@ -371,16 +603,66 @@ function handleAIDismiss(id: string) {
   dismissSuggestion(id)
 }
 
+const shouldShowSpotify = computed(
+  () => spotifyData.value.isPlaying && Boolean(spotifyData.value.track)
+)
+
 // Task toggle handler
 function toggleTask(id: string) {
   completeTask(id)
 }
 
-// Daily Reading - Verse of the Day (from local JSON for now)
+const TASK_TILE_LIMIT = 5
+const displayedTasks = computed(() => todayTasks.value.slice(0, TASK_TILE_LIMIT))
+const hasMoreTasks = computed(() => todayTasks.value.length > displayedTasks.value.length)
+const newTaskTitle = ref('')
+const newTaskType = ref<'daily' | 'oneoff'>('daily')
+const taskSaving = ref(false)
+const taskError = ref<string | null>(null)
+
+watch(showAddTaskModal, open => {
+  if (!open) {
+    resetTaskForm()
+  }
+})
+
+function resetTaskForm() {
+  newTaskTitle.value = ''
+  newTaskType.value = 'daily'
+  taskError.value = null
+  taskSaving.value = false
+}
+
+async function submitTask() {
+  if (!newTaskTitle.value.trim()) {
+    taskError.value = 'Please enter a task title.'
+    return
+  }
+
+  taskSaving.value = true
+  taskError.value = null
+
+  try {
+    await createTask({ title: newTaskTitle.value.trim(), type: newTaskType.value })
+    showAddTaskModal.value = false
+    await fetchSnapshot(true)
+  } catch (error) {
+    console.error('Failed to create task', error)
+    taskError.value = 'Unable to save task. Try again.'
+  } finally {
+    taskSaving.value = false
+  }
+}
+
+const pendingAISuggestions = computed(() => aiSuggestions.value)
+
+// Daily Reading - Verse of the Day (from local JSON for now, syncced with DB status)
 const verseData = useVerseOfDay()
 
 // Computed verse parts for better text hierarchy
 const verseMain = computed(() => {
+  // Use DB reference if possible, but we still need the text from the JSON
+  // For now, we assume the plan matches or we just show the text we have
   const text = verseData.text.value
   // Get first sentence or first ~60 chars
   const firstSentence = text.match(/^[^.!?]+[.!?]?/)?.[0] || text
@@ -393,19 +675,149 @@ const verseRest = computed(() => {
   return text.slice(main.length).trim()
 })
 
-// Energy Chart
-const energyPeriod = ref('weekly')
+// Use DB data for status and reference
+const currentReference = computed(() => bibleData.value.reference || verseData.reference.value)
+const isBibleCompleted = computed(() => bibleData.value.completed)
 
-// Weather Mock Data (to be wired up later)
-const weatherForecast = [
-  { day: 'S', date: '17' },
-  { day: 'M', date: '20' },
-  { day: 'T', date: '18' },
-  { day: 'W', date: '23' },
-  { day: 'T', date: '22' },
-  { day: 'F', date: '17' },
-  { day: 'S', date: '24' },
-]
+function handleBibleAction() {
+  markBibleComplete()
+}
+
+// Energy Chart
+const energyPeriod = ref<'weekly' | 'monthly'>('weekly')
+const energyChart = computed(() => {
+  if (energyPeriod.value === 'weekly') {
+    return {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      data: [80, 120, 100, 140, 110, 130, 145],
+    }
+  }
+  return {
+    labels: ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'],
+    data: [540, 610, 575, 630],
+  }
+})
+
+// Weather helpers
+const weatherIconMap = {
+  sun: Sun,
+  'sun-cloud': CloudSun,
+  cloud: Cloud,
+  rain: CloudRain,
+  snow: CloudSnow,
+  storm: CloudLightning,
+  fog: CloudFog,
+} as const
+
+const weatherIcon = computed(() => weatherIconMap[weatherData.value.icon] ?? CloudSun)
+
+const fallbackForecast = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => ({
+  day,
+  high: null,
+  low: null,
+}))
+
+const formattedForecast = computed(
+  () => weatherData.value.forecast?.map(item => ({ ...item })) ?? fallbackForecast
+)
+
+function formatTemperature(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—'
+  return `${Math.round(value)}°`
+}
+
+function formatRelativeTime(timestamp?: number | null): string {
+  if (!timestamp) return '—'
+  const diff = Date.now() - timestamp
+  const minutes = Math.floor(diff / 60000)
+
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+const weatherUpdatedLabel = computed(() => formatRelativeTime(weatherData.value.lastUpdated))
+
+// Weather settings form
+const weatherForm = ref<WeatherSettings>({
+  locationMode: 'city',
+  cityName: 'New York',
+  units: 'metric',
+})
+const loadingWeatherSettings = ref(false)
+const savingWeatherSettings = ref(false)
+const weatherSettingsError = ref<string | null>(null)
+
+watch(showSettings, value => {
+  if (value) {
+    loadWeatherSettings()
+  }
+})
+
+async function loadWeatherSettings() {
+  loadingWeatherSettings.value = true
+  weatherSettingsError.value = null
+  try {
+    const settings = (await window.electronAPI.getWeatherSettings()) as WeatherSettings
+    weatherForm.value = { ...settings }
+  } catch (error) {
+    console.error('Failed to load weather settings', error)
+    weatherSettingsError.value = 'Unable to load settings.'
+  } finally {
+    loadingWeatherSettings.value = false
+  }
+}
+
+async function saveWeatherSettings() {
+  weatherSettingsError.value = null
+
+  if (weatherForm.value.locationMode === 'city' && !weatherForm.value.cityName?.trim()) {
+    weatherSettingsError.value = 'Enter a city name.'
+    return
+  }
+
+  if (
+    weatherForm.value.locationMode === 'latlon' &&
+    (weatherForm.value.latitude === undefined || weatherForm.value.longitude === undefined)
+  ) {
+    weatherSettingsError.value = 'Provide both latitude and longitude.'
+    return
+  }
+
+  savingWeatherSettings.value = true
+  try {
+    await window.electronAPI.setWeatherSettings(weatherForm.value)
+    await fetchSnapshot(true)
+    showSettings.value = false
+  } catch (error) {
+    console.error('Failed to save weather settings', error)
+    weatherSettingsError.value = 'Failed to save settings.'
+  } finally {
+    savingWeatherSettings.value = false
+  }
+}
+
+// Health helpers
+const healthTrend = computed(() => {
+  const base = Math.max(2500, healthData.value.steps - 2000)
+  return Array.from({ length: 7 }, (_, index) =>
+    Math.round(base + Math.sin(index / 2) * 600)
+  )
+})
+const sleepTrend = [420, 460, 410, 440, 400, 450, 430]
+const healthSyncLabel = computed(() => formatRelativeTime(lastSync.value.health))
+const latestHealthSteps = computed(() => {
+  const trend = healthTrend.value
+  const last = trend[trend.length - 1]
+  return last ? last.toLocaleString() : '--'
+})
+const latestSleepMinutes = computed(() => {
+  const last = sleepTrend[sleepTrend.length - 1]
+  return last ? `${last}m` : '--'
+})
 </script>
 
 <style scoped>
@@ -627,6 +1039,22 @@ const weatherForecast = [
   color: var(--text-secondary);
 }
 
+.task-view-all {
+  align-self: flex-start;
+  padding: 4px 10px;
+  margin-top: -4px;
+  border-radius: var(--radius-chip);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.task-view-all:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .tile--health {
   flex: 1.5;
 }
@@ -682,7 +1110,7 @@ const weatherForecast = [
 .bible-reference {
   font-size: var(--text-sm);
   font-weight: var(--font-bold);
-  color: var(--color-white);
+  color: rgba(255, 255, 255, 0.95);
   letter-spacing: -0.01em;
   margin: 0 0 var(--space-sm) 0;
 }
@@ -699,15 +1127,13 @@ const weatherForecast = [
 .bible-verse__main {
   font-size: var(--text-sm);
   line-height: 1.45;
-  color: var(--text-primary);
-  font-style: italic;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .bible-verse__rest {
   font-size: var(--text-xs);
   line-height: 1.4;
-  color: var(--text-secondary);
-  opacity: 0.7;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .bible-actions {
@@ -718,10 +1144,10 @@ const weatherForecast = [
 
 .bible-button {
   padding: var(--space-xs) var(--space-md);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-green);
+  border: 1px solid var(--color-green);
   border-radius: var(--radius-chip);
-  color: var(--text-secondary);
+  color: var(--color-white);
   font-size: var(--text-sm);
   cursor: pointer;
   transition:
@@ -729,15 +1155,10 @@ const weatherForecast = [
     color var(--duration-fast) var(--ease-out);
 }
 
-.bible-button:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
-}
-
 .bible-button--done {
-  background: var(--color-green);
-  border-color: var(--color-green);
-  color: var(--color-white);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  border-color: transparent;
 }
 
 /* Bottom Row */
@@ -788,6 +1209,16 @@ const weatherForecast = [
   gap: var(--space-sm);
 }
 
+.weather-settings-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
 .weather-today {
   display: flex;
   flex-direction: column;
@@ -805,11 +1236,19 @@ const weatherForecast = [
   gap: var(--space-xs);
 }
 
-.weather-high {
+.weather-current {
   font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   color: var(--color-white);
   letter-spacing: -0.02em;
+}
+
+.weather-range {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .weather-divider {
@@ -817,16 +1256,17 @@ const weatherForecast = [
   opacity: 0.6;
 }
 
-.weather-low {
-  font-size: var(--text-lg);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-}
-
 .weather-label {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.weather-location {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .weather-week {
@@ -850,5 +1290,255 @@ const weatherForecast = [
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-primary);
+}
+
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.form-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  color: var(--text-primary);
+}
+
+.task-type-buttons {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.task-type-btn {
+  flex: 1;
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.task-type-btn--active {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: var(--color-green);
+}
+
+.form-error {
+  color: var(--color-red);
+  font-size: var(--text-xs);
+}
+
+.form-submit {
+  width: 100%;
+  padding: var(--space-sm);
+  border-radius: var(--radius-chip);
+  border: none;
+  background: var(--color-blue);
+  color: var(--color-white);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+
+.task-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ai-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ai-modal-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-modal-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-modal-title {
+  font-weight: var(--font-semibold);
+  margin: 0;
+}
+
+.ai-modal-reason {
+  margin: 4px 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.ai-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-modal-actions button {
+  padding: 6px 10px;
+  border-radius: var(--radius-chip);
+  border: none;
+  cursor: pointer;
+}
+
+.ai-modal-actions button:first-child {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--color-green);
+}
+
+.ai-modal-actions button:last-child {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-red);
+}
+
+.ai-modal-empty {
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.settings-radio-group {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.coordinates-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.settings-note {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.health-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-md);
+}
+
+.health-hero-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-tile);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.health-hero-card__ring {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.health-hero-card__stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.health-hero-card__value {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--color-white);
+}
+
+.health-hero-card__label {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.health-hero-card__meta {
+  display: flex;
+  justify-content: space-between;
+}
+
+.health-meta__label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.health-meta__value {
+  font-size: var(--text-lg);
+  margin: 0;
+}
+
+.health-sync {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.health-sync--warning {
+  color: var(--color-orange);
+}
+
+.health-trends {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-md);
+}
+
+.health-trend-card {
+  padding: var(--space-md);
+  border-radius: var(--radius-tile);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.health-trend-card__header {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+}
+
+.health-trend-card__value {
+  color: var(--color-white);
+  font-weight: var(--font-semibold);
+}
+
+.weather-day-low {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.weather-updated {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
 }
 </style>

@@ -16,7 +16,7 @@ const LOGICAL_DAY_START_HOUR = 12 // Noon
 /**
  * Get the logical day as YYYYMMDD integer for a given timestamp
  */
-export function getLogicalDay(timestamp: number = Date.now(), timezone?: string): LogicalDay {
+export function getLogicalDay(timestamp: number = Date.now(), _timezone?: string): LogicalDay {
   const date = new Date(timestamp)
 
   // If timezone is provided, we need to convert

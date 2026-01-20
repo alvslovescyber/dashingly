@@ -33,12 +33,9 @@ export function createTask(title: string, type: 'daily' | 'oneoff' = 'daily'): s
   const db = getDatabase()
   const id = randomUUID()
 
-  db.prepare('INSERT INTO tasks (id, title, type, is_active, created_at) VALUES (?, ?, ?, 1, ?)').run(
-    id,
-    title,
-    type,
-    Date.now()
-  )
+  db.prepare(
+    'INSERT INTO tasks (id, title, type, is_active, created_at) VALUES (?, ?, ?, 1, ?)'
+  ).run(id, title, type, Date.now())
 
   return id
 }

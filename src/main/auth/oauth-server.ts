@@ -1,7 +1,7 @@
-import express, { Request, Response, NextFunction } from 'express'
+import express, { Request, Response } from 'express'
 import { networkInterfaces } from 'os'
 import QRCode from 'qrcode'
-import { getSetting, setSetting } from '../db/database'
+import { setSetting } from '../db/database'
 import { validateHealthPayload } from '../../shared/schemas'
 import type { OAuthTokens } from '../../shared/types'
 
@@ -28,10 +28,11 @@ function getLocalIP(): string {
 // STRAVA OAUTH
 // ============================================
 
-app.get('/oauth/strava/start', (_req: Request, res: Response) => {
+app.get('/oauth/strava/start', (_req: Request, res: Response): void => {
   const clientId = process.env.STRAVA_CLIENT_ID
   if (!clientId) {
-    return res.status(500).send('Strava client ID not configured')
+    res.status(500).send('Strava client ID not configured')
+    return
   }
 
   const ip = getLocalIP()
@@ -48,11 +49,11 @@ app.get('/oauth/strava/start', (_req: Request, res: Response) => {
   res.redirect(authUrl.toString())
 })
 
-app.get('/oauth/strava/callback', async (req: Request, res: Response) => {
+app.get('/oauth/strava/callback', async (req: Request, res: Response): Promise<void> => {
   const { code, error } = req.query
 
   if (error) {
-    return res.send(`
+    res.send(`
       <html>
         <body style="font-family: system-ui; padding: 40px; text-align: center;">
           <h1>Authorization Failed</h1>
@@ -61,10 +62,12 @@ app.get('/oauth/strava/callback', async (req: Request, res: Response) => {
         </body>
       </html>
     `)
+    return
   }
 
   if (!code || typeof code !== 'string') {
-    return res.status(400).send('Missing authorization code')
+    res.status(400).send('Missing authorization code')
+    return
   }
 
   try {
@@ -124,10 +127,11 @@ app.get('/oauth/strava/callback', async (req: Request, res: Response) => {
 // SPOTIFY OAUTH
 // ============================================
 
-app.get('/oauth/spotify/start', (_req: Request, res: Response) => {
+app.get('/oauth/spotify/start', (_req: Request, res: Response): void => {
   const clientId = process.env.SPOTIFY_CLIENT_ID
   if (!clientId) {
-    return res.status(500).send('Spotify client ID not configured')
+    res.status(500).send('Spotify client ID not configured')
+    return
   }
 
   const ip = getLocalIP()
@@ -143,11 +147,11 @@ app.get('/oauth/spotify/start', (_req: Request, res: Response) => {
   res.redirect(authUrl.toString())
 })
 
-app.get('/oauth/spotify/callback', async (req: Request, res: Response) => {
+app.get('/oauth/spotify/callback', async (req: Request, res: Response): Promise<void> => {
   const { code, error } = req.query
 
   if (error) {
-    return res.send(`
+    res.send(`
       <html>
         <body style="font-family: system-ui; padding: 40px; text-align: center;">
           <h1>Authorization Failed</h1>
@@ -156,10 +160,12 @@ app.get('/oauth/spotify/callback', async (req: Request, res: Response) => {
         </body>
       </html>
     `)
+    return
   }
 
   if (!code || typeof code !== 'string') {
-    return res.status(400).send('Missing authorization code')
+    res.status(400).send('Missing authorization code')
+    return
   }
 
   try {
@@ -227,26 +233,29 @@ app.get('/oauth/spotify/callback', async (req: Request, res: Response) => {
 // HEALTH DATA ENDPOINT
 // ============================================
 
-app.post('/health', (req: Request, res: Response) => {
+app.post('/health', (req: Request, res: Response): void => {
   // Verify shared secret
   const authHeader = req.headers.authorization
   const expectedSecret = process.env.HEALTH_SYNC_SHARED_SECRET
 
   if (!expectedSecret) {
-    return res.status(500).json({ error: 'Health sync not configured' })
+    res.status(500).json({ error: 'Health sync not configured' })
+    return
   }
 
   if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {
-    return res.status(401).json({ error: 'Unauthorized' })
+    res.status(401).json({ error: 'Unauthorized' })
+    return
   }
 
   // Validate payload
   const result = validateHealthPayload(req.body)
   if (!result.success) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Invalid payload',
       details: result.error.issues,
     })
+    return
   }
 
   try {
@@ -282,7 +291,7 @@ app.post('/health', (req: Request, res: Response) => {
 // QR CODE GENERATION
 // ============================================
 
-app.get('/qr/:service', async (req: Request, res: Response) => {
+app.get('/qr/:service', async (req: Request, res: Response): Promise<void> => {
   const { service } = req.params
   const ip = getLocalIP()
   const port = process.env.AUTH_SERVER_PORT || '3847'
@@ -299,7 +308,8 @@ app.get('/qr/:service', async (req: Request, res: Response) => {
       url = `http://${ip}:${port}/health-info`
       break
     default:
-      return res.status(404).send('Unknown service')
+      res.status(404).send('Unknown service')
+      return
   }
 
   try {
@@ -312,7 +322,7 @@ app.get('/qr/:service', async (req: Request, res: Response) => {
       },
     })
     res.json({ url, qr })
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to generate QR code' })
   }
 })

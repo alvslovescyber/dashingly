@@ -31,6 +31,19 @@ export const settingsSchema = z.object({
     soundEnabled: z.boolean().default(true),
     quietHoursEnabled: z.boolean().default(true),
   }),
+  weather: z
+    .object({
+      locationMode: z.enum(['city', 'latlon']).default('city'),
+      cityName: z.string().min(1).default('New York'),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+      units: z.enum(['metric', 'imperial']).default('metric'),
+    })
+    .default({
+      locationMode: 'city',
+      cityName: 'New York',
+      units: 'metric',
+    }),
 })
 
 // ============================================

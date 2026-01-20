@@ -26,7 +26,7 @@ export function initBrightness(): BrightnessSupport {
       if (basePath === '/sys/class/backlight') {
         try {
           const devices = readdirSync(basePath)
-          if (devices.length > 0) {
+          if (devices.length > 0 && devices[0]) {
             backlightPath = join(basePath, devices[0])
           }
         } catch {
@@ -142,8 +142,8 @@ export function isNightTime(nightStart: string, nightEnd: string): boolean {
   const now = new Date()
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
-  const [startHour, startMin] = nightStart.split(':').map(Number)
-  const [endHour, endMin] = nightEnd.split(':').map(Number)
+  const [startHour = 0, startMin = 0] = nightStart.split(':').map(Number)
+  const [endHour = 0, endMin = 0] = nightEnd.split(':').map(Number)
 
   const startMinutes = startHour * 60 + startMin
   const endMinutes = endHour * 60 + endMin
@@ -169,7 +169,7 @@ export function applyScheduledBrightness(schedule: BrightnessSchedule): void {
   let applicableEntry = schedule.entries[0]
 
   for (const entry of schedule.entries) {
-    const [hour, min] = entry.time.split(':').map(Number)
+    const [hour = 0, min = 0] = entry.time.split(':').map(Number)
     const entryMinutes = hour * 60 + min
 
     if (entryMinutes <= currentMinutes) {

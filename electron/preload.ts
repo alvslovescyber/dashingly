@@ -1,4 +1,5 @@
 import { ipcRenderer, contextBridge } from 'electron'
+import type { WeatherSettings } from '../src/shared/types'
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -13,6 +14,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Settings
   getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
   setSetting: (key: string, value: unknown) => ipcRenderer.invoke('set-setting', key, value),
+  getWeatherSettings: () => ipcRenderer.invoke('get-weather-settings'),
+  setWeatherSettings: (settings: WeatherSettings) =>
+    ipcRenderer.invoke('set-weather-settings', settings),
 
   // Tasks
   getTasks: () => ipcRenderer.invoke('get-tasks'),
@@ -51,7 +55,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBrightness: () => ipcRenderer.invoke('get-brightness'),
   setBrightness: (value: number) => ipcRenderer.invoke('set-brightness', value),
   getBrightnessSchedule: () => ipcRenderer.invoke('get-brightness-schedule'),
-  setBrightnessSchedule: (schedule: unknown) => ipcRenderer.invoke('set-brightness-schedule', schedule),
+  setBrightnessSchedule: (schedule: unknown) =>
+    ipcRenderer.invoke('set-brightness-schedule', schedule),
 
   // Event listeners
   onMainProcessMessage: (callback: (message: string) => void) => {
@@ -70,10 +75,17 @@ declare global {
   interface Window {
     electronAPI: {
       getDashboardSnapshot: () => Promise<unknown>
-      getAppInfo: () => Promise<{ version: string; platform: string; arch: string; isKiosk: boolean }>
+      getAppInfo: () => Promise<{
+        version: string
+        platform: string
+        arch: string
+        isKiosk: boolean
+      }>
       isEncryptionAvailable: () => Promise<boolean>
       getSetting: (key: string) => Promise<unknown>
       setSetting: (key: string, value: unknown) => Promise<void>
+      getWeatherSettings: () => Promise<WeatherSettings>
+      setWeatherSettings: (settings: WeatherSettings) => Promise<void>
       getTasks: () => Promise<unknown[]>
       createTask: (task: unknown) => Promise<string>
       updateTask: (id: string, updates: unknown) => Promise<void>

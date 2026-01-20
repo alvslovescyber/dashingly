@@ -26,6 +26,14 @@
             </button>
           </div>
         </div>
+        <button
+          v-if="suggestions.length > displayedSuggestions.length"
+          class="ai-inbox-view-all"
+          type="button"
+          @click="handleViewAll"
+        >
+          View all
+        </button>
       </div>
 
       <!-- Empty State -->
@@ -61,6 +69,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   accept: [id: string]
   dismiss: [id: string]
+  viewAll: []
 }>()
 
 // Show max 3 suggestions
@@ -78,6 +87,10 @@ function handleAccept(id: string) {
 function handleDismiss(id: string) {
   emit('dismiss', id)
 }
+
+function handleViewAll() {
+  emit('viewAll')
+}
 </script>
 
 <style scoped>
@@ -88,7 +101,7 @@ function handleDismiss(id: string) {
 .ai-inbox-count {
   font-size: var(--text-xs);
   color: var(--text-muted);
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 .ai-inbox-content {
@@ -112,6 +125,23 @@ function handleDismiss(id: string) {
   background: rgba(255, 255, 255, 0.04);
   border-radius: var(--radius-sm);
   transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.ai-inbox-view-all {
+  margin-left: auto;
+  margin-top: var(--space-xs);
+  padding: 4px 10px;
+  border-radius: var(--radius-chip);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.ai-inbox-view-all:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .ai-inbox-item:hover {

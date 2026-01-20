@@ -1,6 +1,7 @@
 import { getDatabase, setSetting } from './database'
 import { getTodayLogicalDay, addDays } from '../../shared/utils/logical-day'
 import { randomUUID } from 'node:crypto'
+import { getDefaultWeatherSettings } from '../integrations/weather'
 
 /**
  * Seed the database with realistic demo data
@@ -34,6 +35,7 @@ export function seedDatabase(): void {
   setSetting('strava_weekly_target', 30) // 30km weekly goal
   setSetting('spotify_connected', true)
   setSetting('bible_plan_start', today)
+  setSetting('weather_settings', getDefaultWeatherSettings())
 
   // ============================================
   // Tasks
@@ -54,7 +56,12 @@ export function seedDatabase(): void {
   `)
 
   for (const task of tasks) {
-    insertTask.run(task.id, task.title, task.type, Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
+    insertTask.run(
+      task.id,
+      task.title,
+      task.type,
+      Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000
+    )
   }
 
   // Task completions for today (some completed)
@@ -79,7 +86,7 @@ export function seedDatabase(): void {
   const suggestions = [
     { title: 'Go for a 5K run', reason: 'You ran 3K yesterday. Push a bit further today!' },
     { title: 'Call your brother', reason: "It's been 2 weeks since your last call." },
-    { title: 'Review monthly budget', reason: "End of month is approaching." },
+    { title: 'Review monthly budget', reason: 'End of month is approaching.' },
   ]
 
   const insertSuggestion = db.prepare(`
@@ -174,7 +181,7 @@ export function seedDatabase(): void {
     'Good Grace',
     'Hillsong UNITED',
     'People',
-    'https://i.scdn.co/image/ab67616d0000b273f854c4a5c2c0db5b0b3d3b3d',
+    null, // Album art URL - will be populated by real Spotify integration
     127000, // 2:07 progress
     243000 // 4:03 duration
   )

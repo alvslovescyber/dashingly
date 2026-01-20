@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { getDatabase, getSetting, setSetting, setLastSync } from '../db/database'
+import { getDatabase, getSetting, setLastSync } from '../db/database'
 import { validateAIResponse } from '../../shared/schemas'
 import { getTodayLogicalDay } from '../../shared/utils/logical-day'
 import type { AITaskSuggestion } from '../../shared/types'

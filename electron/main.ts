@@ -15,6 +15,12 @@ import {
   getSettingValue,
   setSettingValue,
 } from '../src/main/db/actions'
+import {
+  getWeatherSettings,
+  saveWeatherSettings,
+  getWeatherStatus,
+} from '../src/main/integrations/weather'
+import type { WeatherSettings } from '../src/shared/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -48,17 +54,19 @@ function createWindow() {
       contextIsolation: true,
     },
     // Kiosk mode settings for Pi
-    ...(IS_PI ? {
-      fullscreen: true,
-      kiosk: true,
-      frame: false,
-      autoHideMenuBar: true,
-    } : {
-      // Dev mode settings
-      fullscreen: false,
-      frame: true,
-      resizable: true,
-    }),
+    ...(IS_PI
+      ? {
+          fullscreen: true,
+          kiosk: true,
+          frame: false,
+          autoHideMenuBar: true,
+        }
+      : {
+          // Dev mode settings
+          fullscreen: false,
+          frame: true,
+          resizable: true,
+        }),
     // Common settings
     backgroundColor: '#000000',
     show: false, // Show after ready-to-show
@@ -69,7 +77,7 @@ function createWindow() {
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
-    
+
     // Hide cursor in kiosk mode
     if (IS_PI) {
       mainWindow?.webContents.insertCSS('* { cursor: none !important; }')
@@ -141,18 +149,33 @@ function setupIPC() {
     setSettingValue(key, value)
   })
 
+  ipcMain.handle('get-weather-settings', async () => {
+    return getWeatherSettings()
+  })
+
+  ipcMain.handle('set-weather-settings', async (_event, settings: WeatherSettings) => {
+    saveWeatherSettings(settings)
+    await getWeatherStatus() // refresh cache for new location
+  })
+
   // Task actions
   ipcMain.handle('complete-task', async (_event, taskId: string) => {
     completeTask(taskId)
   })
 
-  ipcMain.handle('create-task', async (_event, task: { title: string; type?: 'daily' | 'oneoff' }) => {
-    return createTask(task.title, task.type)
-  })
+  ipcMain.handle(
+    'create-task',
+    async (_event, task: { title: string; type?: 'daily' | 'oneoff' }) => {
+      return createTask(task.title, task.type)
+    }
+  )
 
-  ipcMain.handle('update-task', async (_event, id: string, updates: { title?: string; type?: string; isActive?: boolean }) => {
-    updateTask(id, updates)
-  })
+  ipcMain.handle(
+    'update-task',
+    async (_event, id: string, updates: { title?: string; type?: string; isActive?: boolean }) => {
+      updateTask(id, updates)
+    }
+  )
 
   ipcMain.handle('delete-task', async (_event, id: string) => {
     deleteTask(id)
@@ -210,7 +233,7 @@ app.on('window-all-closed', () => {
 })
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   console.error('Uncaught Exception:', error)
 })
 

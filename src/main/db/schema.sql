@@ -131,6 +131,15 @@ CREATE TABLE IF NOT EXISTS spotify_now_playing (
 );
 
 -- ============================================
+-- Weather Cache
+-- ============================================
+CREATE TABLE IF NOT EXISTS weather_cache (
+    cache_key TEXT PRIMARY KEY,
+    payload TEXT NOT NULL,
+    fetched_at INTEGER NOT NULL
+);
+
+-- ============================================
 -- Sync Status (for last sync times)
 -- ============================================
 CREATE TABLE IF NOT EXISTS sync_status (

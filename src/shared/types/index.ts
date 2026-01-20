@@ -9,6 +9,14 @@ export interface UserConfig {
   timezone: string
 }
 
+export interface WeatherSettings {
+  locationMode: 'city' | 'latlon'
+  cityName?: string
+  latitude?: number
+  longitude?: number
+  units: 'metric' | 'imperial'
+}
+
 export interface Settings {
   mockMode: boolean
   debugMode: boolean
@@ -25,6 +33,7 @@ export interface Settings {
     soundEnabled: boolean
     quietHoursEnabled: boolean
   }
+  weather: WeatherSettings
 }
 
 // ============================================
@@ -173,6 +182,28 @@ export interface SpotifyStatus {
 }
 
 // ============================================
+// Weather
+// ============================================
+
+export interface WeatherForecastEntry {
+  day: string
+  high: number | null
+  low: number | null
+  icon?: string
+}
+
+export interface WeatherStatus {
+  locationName: string
+  temperature: number | null
+  high: number | null
+  low: number | null
+  condition?: string
+  icon?: string
+  lastUpdated?: number
+  forecast?: WeatherForecastEntry[]
+}
+
+// ============================================
 // Dashboard Snapshot (Main IPC response)
 // ============================================
 
@@ -187,11 +218,13 @@ export interface DashboardSnapshot {
   health: HealthStatus | null
   spotify: SpotifyStatus | null
   bible: BibleStatus | null
+  weather: WeatherStatus | null
   lastSync: {
     strava?: number
     health?: number
     spotify?: number
     ai?: number
+    weather?: number
   }
 }
 
