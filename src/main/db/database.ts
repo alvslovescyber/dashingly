@@ -87,13 +87,21 @@ export function closeDatabase(): void {
 function runSchema(database: Database.Database): void {
   try {
     // Look for schema file
-    const schemaPath = join(__dirname, 'schema.sql')
+    let schemaPath = join(__dirname, 'schema.sql')
+
+    // In development/test, the schema might be in the source directory
+    if (!existsSync(schemaPath)) {
+      const devSchemaPath = join(process.env.APP_ROOT || process.cwd(), 'src/main/db/schema.sql')
+      if (existsSync(devSchemaPath)) {
+        schemaPath = devSchemaPath
+      }
+    }
 
     if (existsSync(schemaPath)) {
       const schema = readFileSync(schemaPath, 'utf8')
       database.exec(schema)
     } else {
-      console.warn('Schema file not found, using inline schema')
+      console.warn('Schema file not found at', schemaPath, '- using inline schema')
       // Fallback inline schema (minimal)
       database.exec(`
         CREATE TABLE IF NOT EXISTS settings (
