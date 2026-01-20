@@ -4,7 +4,7 @@
       <!-- Logo -->
       <div class="sidebar__logo">
         <div class="sidebar__logo-icon">
-          <LayoutDashboard :size="24" />
+          <LayoutDashboard :size="22" :stroke-width="2" />
         </div>
       </div>
 
@@ -15,21 +15,22 @@
           :key="item.id"
           class="sidebar__item"
           :class="{ 'sidebar__item--active': currentRoute === item.id }"
+          :title="item.label"
           @click="$emit('navigate', item.id)"
         >
-          <component :is="item.icon" :size="22" />
+          <component :is="item.icon" :size="20" :stroke-width="1.75" />
         </button>
       </div>
     </div>
 
     <div class="sidebar__bottom">
-      <!-- Settings -->
       <button
         class="sidebar__item"
         :class="{ 'sidebar__item--active': currentRoute === 'settings' }"
+        title="Settings"
         @click="$emit('navigate', 'settings')"
       >
-        <Settings :size="22" />
+        <Settings :size="20" :stroke-width="1.75" />
       </button>
     </div>
   </nav>
@@ -74,10 +75,9 @@ const navItems = [
   justify-content: space-between;
   width: var(--sidebar-width);
   height: 100%;
-  background: var(--glass-white-light);
-  backdrop-filter: blur(var(--blur-subtle));
-  -webkit-backdrop-filter: blur(var(--blur-subtle));
-  border-right: 1px solid var(--border-light);
+  /* Subtle transparency, letting shell background show */
+  background: var(--glass-sidebar);
+  border-right: var(--border-shell);
   padding: var(--space-md) var(--space-sm);
 }
 
@@ -92,26 +92,29 @@ const navItems = [
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
 }
 
 .sidebar__logo-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--color-blue) 0%, var(--color-teal) 100%);
-  border-radius: var(--radius-button);
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, var(--color-blue) 0%, #1d7cf2 100%);
+  border-radius: 10px;
   color: var(--color-white);
+  box-shadow: 
+    0 4px 12px rgba(59, 130, 246, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .sidebar__nav {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 8px;
 }
 
 .sidebar__bottom {
@@ -124,30 +127,30 @@ const navItems = [
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   background: transparent;
   border: none;
   border-radius: var(--radius-button);
-  color: var(--text-tertiary);
+  /* Inactive = dimmer */
+  color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  transition: 
-    background-color var(--duration-fast) var(--ease-default),
-    color var(--duration-fast) var(--ease-default);
-  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s ease-out;
 }
 
 .sidebar__item:hover {
-  background: var(--glass-white);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
 }
 
+/* ACTIVE = brighter + background pill + glow */
 .sidebar__item--active {
-  background: var(--glass-white-medium);
-  color: var(--color-blue);
+  background: var(--glass-active);
+  color: var(--color-blue-light);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
 }
 
 .sidebar__item:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
 }
 </style>

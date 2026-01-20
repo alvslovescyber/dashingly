@@ -89,33 +89,60 @@ function createChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: { duration: 600 },
       plugins: {
+        legend: { display: false },
         tooltip: {
           enabled: true,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleFont: { size: 12 },
-          bodyFont: { size: 11 },
-          padding: 8,
+          mode: 'index',
+          intersect: false,
+          displayColors: false,
+          padding: 10,
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          titleColor: 'rgba(255, 255, 255, 0.95)',
+          bodyColor: 'rgba(255, 255, 255, 0.85)',
+          titleFont: { size: 13, weight: '600', family: 'Inter' },
+          bodyFont: { size: 12, family: 'Inter' },
           cornerRadius: 8,
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
         },
+      },
+      layout: { 
+        padding: { left: -8, right: -8, top: 10, bottom: 0 } 
       },
       scales: {
-        x: {
-          display: false,
+        x: { 
+          display: false, 
+          grid: { display: false } 
         },
-        y: {
-          display: false,
-          beginAtZero: true,
+        y: { 
+          display: false, 
+          grid: { display: false },
+          min: 0,
+        }
+      },
+      elements: {
+        point: { 
+          radius: 0, 
+          hitRadius: 20,
+          hoverRadius: 4,
+          backgroundColor: props.color,
+          borderWidth: 2,
+          borderColor: '#FFF',
         },
+        line: { 
+          borderWidth: 2.5, 
+          tension: 0.45,
+          borderCapStyle: 'round',
+          borderJoinStyle: 'round',
+        }
       },
       interaction: {
-        intersect: false,
-        mode: 'index',
-      },
-      animation: {
-        duration: 500,
-        easing: 'easeOutCubic',
-      },
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
+      }
     },
   })
 }

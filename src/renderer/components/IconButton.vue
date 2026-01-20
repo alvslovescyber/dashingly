@@ -9,7 +9,7 @@
     :disabled="disabled"
     @click="$emit('click')"
   >
-    <component :is="icon" :size="iconSize" />
+    <component :is="icon" :size="iconSize" :stroke-width="1.75" />
   </button>
 </template>
 
@@ -36,11 +36,7 @@ defineEmits<{
 }>()
 
 const iconSize = computed(() => {
-  const sizeMap = {
-    sm: 16,
-    md: 20,
-    lg: 24,
-  }
+  const sizeMap = { sm: 15, md: 18, lg: 22 }
   return sizeMap[props.size]
 })
 </script>
@@ -54,11 +50,11 @@ const iconSize = computed(() => {
   background: transparent;
   cursor: pointer;
   border-radius: var(--radius-button);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   transition: 
-    background-color var(--duration-fast) var(--ease-default),
-    color var(--duration-fast) var(--ease-default),
-    transform var(--duration-fast) var(--ease-default);
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -67,54 +63,49 @@ const iconSize = computed(() => {
 }
 
 .icon-button:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .icon-button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 /* Size Variants */
-.icon-button--sm {
-  width: 32px;
-  height: 32px;
-}
-
-.icon-button--md {
-  width: 40px;
-  height: 40px;
-}
-
-.icon-button--lg {
-  width: 48px;
-  height: 48px;
-}
+.icon-button--sm { width: 30px; height: 30px; }
+.icon-button--md { width: 36px; height: 36px; }
+.icon-button--lg { width: 44px; height: 44px; }
 
 /* Variant: Ghost */
 .icon-button--ghost:hover {
-  background: var(--glass-white-light);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* Variant: Glass */
 .icon-button--glass {
-  background: var(--glass-white);
-  border: 1px solid var(--border-light);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
 }
 
 .icon-button--glass:hover {
-  background: var(--glass-white-medium);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
 }
 
 /* Variant: Solid */
 .icon-button--solid {
   background: var(--color-blue);
   color: var(--color-white);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
 }
 
 .icon-button--solid:hover {
   background: var(--color-blue-dark);
-  color: var(--color-white);
 }
 
 /* Active State */

@@ -9,7 +9,7 @@
         class="spotify-bar__art-image"
       />
       <div v-else class="spotify-bar__art-placeholder">
-        <Music :size="24" />
+        <Music :size="20" :stroke-width="1.5" />
       </div>
     </div>
 
@@ -21,24 +21,11 @@
 
     <!-- Controls -->
     <div class="spotify-bar__controls">
-      <IconButton
-        :icon="SkipBack"
-        size="sm"
-        variant="ghost"
-        @click.stop="$emit('previous')"
-      />
-      <IconButton
-        :icon="isPlaying ? Pause : Play"
-        size="md"
-        variant="glass"
-        @click.stop="$emit('playPause')"
-      />
-      <IconButton
-        :icon="SkipForward"
-        size="sm"
-        variant="ghost"
-        @click.stop="$emit('next')"
-      />
+      <IconButton :icon="SkipBack" size="sm" variant="ghost" @click.stop="$emit('previous')" />
+      <button class="spotify-bar__play-btn" @click.stop="$emit('playPause')">
+        <component :is="isPlaying ? Pause : Play" :size="18" :stroke-width="2" />
+      </button>
+      <IconButton :icon="SkipForward" size="sm" variant="ghost" @click.stop="$emit('next')" />
     </div>
 
     <!-- Progress -->
@@ -84,8 +71,7 @@ const progressPercent = computed(() => {
 })
 
 function handleClick() {
-  // Note: Without Premium, this will just show a toast
-  // explaining that controls require Premium
+  // Show toast about Premium requirement
 }
 </script>
 
@@ -94,27 +80,38 @@ function handleClick() {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--glass-white);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid var(--border-light);
+  padding: 10px 14px;
+  /* Gradient tile style */
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-tile);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-default);
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
 .spotify-bar:hover {
-  background: var(--glass-white-medium);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
 }
 
 /* Album Art */
 .spotify-bar__art {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-sm);
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .spotify-bar__art-image {
@@ -129,7 +126,7 @@ function handleClick() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--glass-dark);
+  background: rgba(0, 0, 0, 0.3);
   color: var(--text-tertiary);
 }
 
@@ -147,12 +144,13 @@ function handleClick() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .spotify-bar__artist {
   font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin: var(--space-xs) 0 0;
+  color: var(--text-tertiary);
+  margin: 2px 0 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,25 +160,48 @@ function handleClick() {
 .spotify-bar__controls {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 2px;
+}
+
+.spotify-bar__play-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--color-white);
+  border: none;
+  border-radius: 50%;
+  color: #000;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.spotify-bar__play-btn:hover {
+  transform: scale(1.05);
+}
+
+.spotify-bar__play-btn:active {
+  transform: scale(0.95);
 }
 
 /* Progress */
 .spotify-bar__progress {
-  width: 100px;
+  width: 80px;
   flex-shrink: 0;
 }
 
 .spotify-bar__progress-bar {
-  height: 4px;
-  background: var(--glass-dark);
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .spotify-bar__progress-fill {
   height: 100%;
-  background: var(--color-green);
+  background: #1DB954;
   border-radius: var(--radius-full);
   transition: width 1s linear;
 }

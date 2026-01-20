@@ -10,7 +10,7 @@
       <component
         v-if="tab.icon"
         :is="tab.icon"
-        :size="14"
+        :size="13"
         class="chip-tab__icon"
       />
       <span>{{ tab.label }}</span>
@@ -22,7 +22,7 @@
       class="chip-tab chip-tab--add"
       @click="$emit('add')"
     >
-      <Plus :size="14" />
+      <Plus :size="13" />
       <span>New</span>
     </button>
   </div>
@@ -58,7 +58,7 @@ defineEmits<{
 .chip-tabs {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 6px;
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
@@ -72,10 +72,11 @@ defineEmits<{
 .chip-tab {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  background: var(--glass-white);
-  border: 1px solid var(--border-light);
+  gap: 5px;
+  padding: 8px 14px;
+  /* Subtle background */
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-chip);
   font-family: var(--font-family);
   font-size: var(--text-sm);
@@ -84,14 +85,16 @@ defineEmits<{
   cursor: pointer;
   white-space: nowrap;
   transition: 
-    background-color var(--duration-fast) var(--ease-default),
-    color var(--duration-fast) var(--ease-default),
-    border-color var(--duration-fast) var(--ease-default);
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
 }
 
 .chip-tab:hover {
-  background: var(--glass-white-medium);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
 }
 
@@ -99,10 +102,15 @@ defineEmits<{
   transform: scale(0.97);
 }
 
+/* ACTIVE = strong fill + subtle glow */
 .chip-tab--active {
   background: var(--color-blue);
   border-color: var(--color-blue);
   color: var(--color-white);
+  font-weight: var(--font-semibold);
+  box-shadow: 
+    0 2px 8px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .chip-tab--active:hover {
@@ -113,17 +121,24 @@ defineEmits<{
 
 .chip-tab__icon {
   flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.chip-tab--active .chip-tab__icon {
+  opacity: 1;
 }
 
 /* Add Button Variant */
 .chip-tab--add {
   background: transparent;
   border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.15);
   color: var(--text-tertiary);
 }
 
 .chip-tab--add:hover {
-  background: var(--glass-white-light);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-secondary);
 }
 </style>

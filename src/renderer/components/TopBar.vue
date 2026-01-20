@@ -8,26 +8,17 @@
     <!-- Center: Search -->
     <div class="top-bar__center">
       <div class="top-bar__search">
-        <Search :size="16" class="top-bar__search-icon" />
+        <Search :size="15" :stroke-width="2" class="top-bar__search-icon" />
         <span class="top-bar__search-placeholder">Search Here</span>
       </div>
     </div>
 
     <!-- Right: Actions -->
     <div class="top-bar__right">
-      <IconButton
-        :icon="Mic"
-        size="md"
-        variant="ghost"
-      />
-      <IconButton
-        :icon="Settings"
-        size="md"
-        variant="ghost"
-        @click="$emit('openSettings')"
-      />
+      <IconButton :icon="Mic" size="md" variant="ghost" />
+      <IconButton :icon="Settings" size="md" variant="ghost" @click="$emit('openSettings')" />
       <div class="top-bar__avatar">
-        <User :size="20" />
+        <User :size="18" :stroke-width="1.75" />
       </div>
     </div>
   </header>
@@ -66,6 +57,7 @@ defineEmits<{
   font-weight: var(--font-semibold);
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .top-bar__center {
@@ -74,22 +66,28 @@ defineEmits<{
   justify-content: center;
 }
 
+/* Search bar = pill CUT into glass */
 .top-bar__search {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  width: 240px;
-  height: 40px;
-  padding: 0 var(--space-md);
-  background: var(--glass-white);
-  border: 1px solid var(--border-light);
+  gap: 8px;
+  width: 220px;
+  height: 38px;
+  padding: 0 14px;
+  /* Inset appearance */
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-full);
+  box-shadow: var(--shadow-inset-pill);
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-default);
+  transition: 
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
 .top-bar__search:hover {
-  background: var(--glass-white-medium);
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .top-bar__search-icon {
@@ -107,19 +105,24 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-sm);
+  gap: 6px;
 }
 
 .top-bar__avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: var(--glass-white-medium);
-  border: 1px solid var(--border-light);
+  width: 38px;
+  height: 38px;
+  margin-left: 6px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   color: var(--text-secondary);
-  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 </style>

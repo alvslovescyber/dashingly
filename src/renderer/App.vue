@@ -1,5 +1,6 @@
 <template>
-  <div class="app-wrapper" :style="wrapperStyle">
+  <div class="app-wrapper">
+    <div class="app-background" />
     <div class="scaled-container" :style="scaledStyle">
       <GlassShell
         class="dashboard-shell"
@@ -48,17 +49,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateScale)
 })
 
-// Wrapper styles (viewport)
-const wrapperStyle = computed(() => ({
-  width: '100vw',
-  height: '100vh',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: `url('/backgrounds/default.webp') center/cover no-repeat`,
-  overflow: 'hidden',
-}))
-
 // Scaled container styles
 const scaledStyle = computed(() => {
   const scale = currentScale.value
@@ -73,6 +63,7 @@ const scaledStyle = computed(() => {
     position: 'absolute' as const,
     left: `${Math.max(0, offsetX)}px`,
     top: `${Math.max(0, offsetY)}px`,
+    zIndex: 1, // Above background
   }
 })
 
@@ -84,10 +75,31 @@ provide('toast', toastRef)
 <style scoped>
 .app-wrapper {
   position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
+}
+
+.app-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/backgrounds/default.jpg') center/cover no-repeat;
+  /* Calm the background to let UI pop */
+  filter: saturate(85%) brightness(92%);
+  z-index: 0;
 }
 
 .scaled-container {
   overflow: hidden;
+  /* Hardware acceleration for smooth scaling */
+  will-change: transform;
 }
 
 .dashboard-shell {

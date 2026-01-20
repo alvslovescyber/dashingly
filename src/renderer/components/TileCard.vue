@@ -5,10 +5,7 @@
       `tile-card--${size}`,
       { 'tile-card--interactive': interactive }
     ]"
-    :style="tileStyle"
     @click="handleClick"
-    @touchstart="handleTouchStart"
-    @touchend="handleTouchEnd"
   >
     <!-- Header -->
     <div v-if="title || $slots.header" class="tile-header">
@@ -18,7 +15,8 @@
             v-if="icon"
             :is="icon"
             class="tile-header__icon"
-            :size="18"
+            :size="16"
+            :stroke-width="2"
           />
           <span class="tile-header__title">{{ title }}</span>
         </div>
@@ -49,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import type { Component } from 'vue'
 import TogglePill from './TogglePill.vue'
 
 interface Props {
@@ -59,7 +57,6 @@ interface Props {
   interactive?: boolean
   showToggle?: boolean
   toggleValue?: boolean
-  accentColor?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -74,26 +71,10 @@ const emit = defineEmits<{
   'update:toggleValue': [value: boolean]
 }>()
 
-const isPressed = ref(false)
-
-const tileStyle = computed(() => ({
-  '--accent-color': props.accentColor || 'var(--color-blue)',
-}))
-
 function handleClick() {
   if (props.interactive) {
     emit('click')
   }
-}
-
-function handleTouchStart() {
-  if (props.interactive) {
-    isPressed.value = true
-  }
-}
-
-function handleTouchEnd() {
-  isPressed.value = false
 }
 </script>
 
@@ -102,17 +83,24 @@ function handleTouchEnd() {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--glass-white);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
+  /* GRADIENT background, NO backdrop blur */
+  background: var(--glass-tile);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  
+  /* Precise hairline border */
+  border: var(--border-tile);
   border-radius: var(--radius-tile);
-  border: 1px solid var(--border-light);
+  
+  /* Layered shadows for depth */
   box-shadow: var(--shadow-tile);
+  
   padding: var(--space-md);
+  overflow: hidden;
   transition: 
     transform var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out);
-  overflow: hidden;
+    box-shadow var(--duration-fast) var(--ease-out),
+    background var(--duration-normal) var(--ease-out);
 }
 
 .tile-card--interactive {
@@ -120,6 +108,7 @@ function handleTouchEnd() {
 }
 
 .tile-card--interactive:hover {
+  background: var(--glass-tile-hover);
   box-shadow: var(--shadow-tile-hover);
 }
 
@@ -128,23 +117,12 @@ function handleTouchEnd() {
 }
 
 /* Size Variants */
-.tile-card--sm {
-  min-height: 100px;
-}
+.tile-card--sm { min-height: 80px; }
+.tile-card--md { min-height: 120px; }
+.tile-card--lg { min-height: 180px; }
+.tile-card--xl { min-height: 240px; }
 
-.tile-card--md {
-  min-height: 140px;
-}
-
-.tile-card--lg {
-  min-height: 200px;
-}
-
-.tile-card--xl {
-  min-height: 280px;
-}
-
-/* Header */
+/* Header - REFINED TYPOGRAPHY */
 .tile-header {
   display: flex;
   align-items: center;
@@ -155,7 +133,7 @@ function handleTouchEnd() {
 .tile-header__content {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 6px;
 }
 
 .tile-header__icon {
@@ -165,8 +143,9 @@ function handleTouchEnd() {
 
 .tile-header__title {
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .tile-header__right {
@@ -185,7 +164,7 @@ function handleTouchEnd() {
 .tile-footer {
   margin-top: auto;
   padding-top: var(--space-sm);
-  border-top: 1px solid var(--border-light);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Toggle Position */
@@ -195,18 +174,18 @@ function handleTouchEnd() {
   right: var(--space-md);
 }
 
-/* Inner glow effect */
+/* Top edge highlight */
 .tile-card::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 10%;
+  right: 10%;
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.12) 50%,
     transparent 100%
   );
   pointer-events: none;

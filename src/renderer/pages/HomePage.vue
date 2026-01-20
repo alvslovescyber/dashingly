@@ -573,14 +573,14 @@ const weatherForecast = [
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm);
-  background: var(--glass-white-light);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-default);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .task-item:hover {
-  background: var(--glass-white);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .task-item--completed {
@@ -592,13 +592,13 @@ const weatherForecast = [
 }
 
 .task-checkbox {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--glass-white);
-  border: 1px solid var(--border-medium);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
   color: var(--color-green);
 }
@@ -620,18 +620,18 @@ const weatherForecast = [
   gap: var(--space-xs);
   padding: var(--space-sm);
   background: transparent;
-  border: 1px dashed var(--border-light);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   font-size: var(--text-sm);
   cursor: pointer;
   transition: 
-    background-color var(--duration-fast) var(--ease-default),
-    color var(--duration-fast) var(--ease-default);
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .task-add:hover {
-  background: var(--glass-white-light);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
 }
 
@@ -702,19 +702,19 @@ const weatherForecast = [
 
 .bible-button {
   padding: var(--space-xs) var(--space-md);
-  background: var(--glass-white);
-  border: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-chip);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   cursor: pointer;
   transition: 
-    background-color var(--duration-fast) var(--ease-default),
-    color var(--duration-fast) var(--ease-default);
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .bible-button:hover {
-  background: var(--glass-white-medium);
+  background: rgba(255, 255, 255, 0.12);
   color: var(--text-primary);
 }
 
