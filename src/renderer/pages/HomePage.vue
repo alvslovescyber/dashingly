@@ -80,7 +80,7 @@
                     :data="stravaData.weekData"
                     :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
                     color="#14B8A6"
-                    gradient-start="rgba(20, 184, 166, 0.3)"
+                    gradient-start="rgba(20, 184, 166, 0.12)"
                     gradient-end="rgba(20, 184, 166, 0)"
                     :height="80"
                   />
@@ -137,10 +137,20 @@
               </TileCard>
 
               <!-- Daily Reading (Bible) Tile -->
-              <TileCard title="Daily Reading" :icon="BookOpen" class="tile--bible" size="md">
+              <TileCard
+                title="Daily Reading"
+                :icon="BookOpen"
+                class="tile--bible tile--solid"
+                size="md"
+              >
                 <div class="bible-content">
                   <p class="bible-reference">{{ verseData.reference }}</p>
-                  <p class="bible-text">{{ verseData.text }}</p>
+                  <p class="bible-verse">
+                    <span class="bible-verse__main">"{{ verseMain }}"</span>
+                    <span v-if="verseRest" class="bible-verse__rest">
+                      {{ verseRest }}
+                    </span>
+                  </p>
                   <div class="bible-actions">
                     <button
                       class="bible-button"
@@ -416,6 +426,20 @@ const healthData = ref({
 // Daily Reading - Verse of the Day
 const verseData = useVerseOfDay()
 
+// Computed verse parts for better text hierarchy
+const verseMain = computed(() => {
+  const text = verseData.text.value
+  // Get first sentence or first ~60 chars
+  const firstSentence = text.match(/^[^.!?]+[.!?]?/)?.[0] || text
+  return firstSentence.length > 80 ? text.slice(0, 60).trim() : firstSentence
+})
+
+const verseRest = computed(() => {
+  const text = verseData.text.value
+  const main = verseMain.value
+  return text.slice(main.length).trim()
+})
+
 // Energy Chart
 const energyPeriod = ref('weekly')
 
@@ -551,17 +575,20 @@ const weatherForecast = [
 .strava-distance {
   font-size: var(--text-3xl);
   font-weight: var(--font-bold);
-  color: var(--text-primary);
+  color: var(--color-white);
+  letter-spacing: -0.02em;
 }
 
 .strava-unit {
   font-size: var(--text-lg);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
 }
 
 .strava-target {
   font-size: var(--text-sm);
   color: var(--text-tertiary);
+  opacity: 0.8;
   margin-bottom: var(--space-md);
 }
 
@@ -672,17 +699,24 @@ const weatherForecast = [
 .health-stat-value {
   display: block;
   font-size: var(--text-lg);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
+  font-weight: var(--font-bold);
+  color: var(--color-white);
+  letter-spacing: -0.01em;
 }
 
 .health-stat-label {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+  opacity: 0.8;
 }
 
 .tile--bible {
   flex: 1.5;
+}
+
+/* Solid variant for Daily Reading - more legible */
+.tile--solid {
+  background: var(--glass-tile-solid);
 }
 
 .bible-content {
@@ -696,19 +730,31 @@ const weatherForecast = [
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  margin: 0 0 var(--space-xs) 0;
+  opacity: 0.95;
+  margin: 0 0 var(--space-sm) 0;
 }
 
-.bible-text {
-  font-size: var(--text-xs);
-  line-height: 1.5;
-  color: var(--text-secondary);
+.bible-verse {
   margin: 0;
   flex: 1;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
+}
+
+.bible-verse__main {
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--text-primary);
+  opacity: 0.9;
+}
+
+.bible-verse__rest {
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 
 .bible-actions {
@@ -809,21 +855,25 @@ const weatherForecast = [
 .weather-high {
   font-size: var(--text-2xl);
   font-weight: var(--font-bold);
-  color: var(--text-primary);
+  color: var(--color-white);
+  letter-spacing: -0.02em;
 }
 
 .weather-divider {
   color: var(--text-tertiary);
+  opacity: 0.6;
 }
 
 .weather-low {
   font-size: var(--text-lg);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
 }
 
 .weather-label {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+  opacity: 0.8;
 }
 
 .weather-week {

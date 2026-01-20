@@ -87,8 +87,8 @@ provide('toast', toastRef)
   width: 100%;
   height: 100%;
   background: url('/backgrounds/default.jpg') center/cover no-repeat;
-  /* Calm the background to let UI pop */
-  filter: saturate(85%) brightness(92%);
+  /* Darker, calmer background to let glass UI pop */
+  filter: brightness(85%) saturate(90%);
   z-index: 0;
 }
 

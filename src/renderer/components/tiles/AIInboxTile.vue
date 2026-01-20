@@ -16,13 +16,13 @@
           </div>
           <div class="ai-inbox-item__actions">
             <button class="ai-inbox-btn ai-inbox-btn--accept" @click="handleAccept(suggestion.id)">
-              <Check :size="14" />
+              <Check :size="12" />
             </button>
             <button
               class="ai-inbox-btn ai-inbox-btn--dismiss"
               @click="handleDismiss(suggestion.id)"
             >
-              <X :size="14" />
+              <X :size="12" />
             </button>
           </div>
         </div>
@@ -87,7 +87,8 @@ function handleDismiss(id: string) {
 
 .ai-inbox-count {
   font-size: var(--text-xs);
-  color: var(--text-tertiary);
+  color: var(--text-muted);
+  opacity: 0.8;
 }
 
 .ai-inbox-content {
@@ -152,10 +153,10 @@ function handleDismiss(id: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   cursor: pointer;
   transition:
     background-color var(--duration-fast) var(--ease-out),

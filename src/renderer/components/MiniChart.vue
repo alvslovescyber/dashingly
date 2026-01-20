@@ -40,7 +40,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   color: '#3B82F6',
-  gradientStart: 'rgba(59, 130, 246, 0.3)',
+  gradientStart: 'rgba(59, 130, 246, 0.15)',
   gradientEnd: 'rgba(59, 130, 246, 0)',
   showPoints: false,
   height: 80,
