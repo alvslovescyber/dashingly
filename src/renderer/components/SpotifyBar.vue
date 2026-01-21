@@ -26,9 +26,7 @@
           <p class="spotify-tile__empty-title">No playback detected</p>
           <p class="spotify-tile__empty-copy">Retry to refresh the current track.</p>
         </div>
-        <button class="spotify-tile__retry" type="button" @click="$emit('retry')">
-          Retry
-        </button>
+        <button class="spotify-tile__retry" type="button" @click="$emit('retry')">Retry</button>
       </div>
     </template>
 
@@ -53,46 +51,39 @@
 
         <!-- Track Info - Vertically Centered -->
         <div class="spotify-tile__info">
-          <span class="spotify-tile__label">Now playing</span>
+          <span class="spotify-tile__label">Now Playing</span>
           <p class="spotify-tile__track">{{ track }}</p>
           <p class="spotify-tile__artist">{{ artist }}</p>
         </div>
       </div>
 
-      <!-- Progress Bar -->
-      <div class="spotify-tile__progress">
-        <div class="spotify-tile__progress-bar">
-          <div class="spotify-tile__progress-fill" :style="{ width: `${progressPercent}%` }" />
+      <!-- Progress + Controls -->
+      <div class="spotify-tile__playback">
+        <div class="spotify-tile__progress">
+          <div class="spotify-tile__progress-bar">
+            <div class="spotify-tile__progress-fill" :style="{ width: `${progressPercent}%` }" />
+          </div>
+          <div class="spotify-tile__times">
+            <span>{{ formatTime(progressMs) }}</span>
+            <span>{{ formatTime(durationMs) }}</span>
+          </div>
         </div>
-        <div class="spotify-tile__times">
-          <span>{{ formatTime(progressMs) }}</span>
-          <span>{{ formatTime(durationMs) }}</span>
-        </div>
-      </div>
 
-      <!-- Controls Row -->
-      <div class="spotify-tile__controls">
-        <button
-          class="spotify-tile__btn"
-          :disabled="!hasTrack"
-          @click.stop="$emit('previous')"
-        >
-          <SkipBack :size="16" :stroke-width="2" />
-        </button>
-        <button
-          class="spotify-tile__play"
-          :class="{ 'spotify-tile__play--active': isPlaying }"
-          @click.stop="$emit('playPause')"
-        >
-          <component :is="isPlaying ? Pause : Play" :size="18" :stroke-width="2.5" />
-        </button>
-        <button
-          class="spotify-tile__btn"
-          :disabled="!hasTrack"
-          @click.stop="$emit('next')"
-        >
-          <SkipForward :size="16" :stroke-width="2" />
-        </button>
+        <div class="spotify-tile__controls">
+          <button class="spotify-tile__btn" :disabled="!hasTrack" @click.stop="$emit('previous')">
+            <SkipBack :size="14" :stroke-width="2" />
+          </button>
+          <button
+            class="spotify-tile__play"
+            :class="{ 'spotify-tile__play--active': isPlaying }"
+            @click.stop="$emit('playPause')"
+          >
+            <component :is="isPlaying ? Pause : Play" :size="18" :stroke-width="2.5" />
+          </button>
+          <button class="spotify-tile__btn" :disabled="!hasTrack" @click.stop="$emit('next')">
+            <SkipForward :size="14" :stroke-width="2" />
+          </button>
+        </div>
       </div>
     </template>
   </div>
@@ -173,23 +164,23 @@ function handleArtError(event: Event) {
   gap: var(--space-sm);
   padding: var(--space-md);
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-tile);
   box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.12),
+    0 4px 18px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: all var(--duration-normal) var(--ease-out);
 }
 
 .spotify-tile--playing {
-  border-color: rgba(34, 197, 94, 0.35);
+  border-color: rgba(34, 197, 94, 0.22);
   box-shadow:
-    0 6px 28px rgba(34, 197, 94, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 10px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .spotify-tile--paused {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .spotify-tile--error {
@@ -198,7 +189,7 @@ function handleArtError(event: Event) {
 }
 
 .spotify-tile--disconnected {
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 /* Main Row: Art + Info */
@@ -211,13 +202,13 @@ function handleArtError(event: Event) {
 /* Album Art - Fixed 72x72 */
 .spotify-tile__art {
   position: relative;
-  flex: 0 0 72px;
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
+  flex: 0 0 88px;
+  width: 88px;
+  height: 88px;
+  border-radius: 14px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
 }
 
 .spotify-tile__art-image {
@@ -251,8 +242,15 @@ function handleArtError(event: Event) {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.15); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
 }
 
 /* Track Info - Vertically Centered */
@@ -262,23 +260,23 @@ function handleArtError(event: Event) {
   flex-direction: column;
   justify-content: center;
   min-width: 0;
-  gap: 2px;
+  gap: 4px;
 }
 
 .spotify-tile__label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: var(--font-semibold);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
 .spotify-tile__track {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: var(--font-semibold);
   color: var(--color-white);
   margin: 0;
-  line-height: 1.25;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -294,56 +292,62 @@ function handleArtError(event: Event) {
 }
 
 /* Progress Bar */
+.spotify-tile__playback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .spotify-tile__progress {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 4px;
+  gap: 6px;
+  flex: 1;
 }
 
 .spotify-tile__progress-bar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.12);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .spotify-tile__progress-fill {
   height: 100%;
-  background: #1db954;
+  background: #22c55e;
   border-radius: var(--radius-full);
-  transition: width 1s linear;
+  transition: width 1s ease-out;
 }
 
 .spotify-tile__times {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: var(--text-muted);
+  font-size: 11px;
+  color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
 
 /* Controls Row */
 .spotify-tile__controls {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-sm);
-  padding-top: var(--space-xs);
+  gap: 6px;
 }
 
 .spotify-tile__btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .spotify-tile__btn:hover:not(:disabled) {
@@ -365,14 +369,14 @@ function handleArtError(event: Event) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: var(--color-white);
   border: none;
   border-radius: 50%;
   color: #000;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
   transition: all var(--duration-fast) var(--ease-out);
 }
 

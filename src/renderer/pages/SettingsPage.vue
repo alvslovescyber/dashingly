@@ -41,11 +41,7 @@
             <p v-if="displayNameError" class="form-error">{{ displayNameError }}</p>
           </div>
           <div class="settings-actions">
-            <button
-              class="settings-button"
-              :disabled="savingDisplayName"
-              @click="saveDisplayName"
-            >
+            <button class="settings-button" :disabled="savingDisplayName" @click="saveDisplayName">
               {{ savingDisplayName ? 'Saving…' : 'Save name' }}
             </button>
           </div>
@@ -58,7 +54,9 @@
             <div class="segmented-control">
               <button
                 class="segmented-control__button"
-                :class="{ 'segmented-control__button--active': weatherForm.locationMode === 'city' }"
+                :class="{
+                  'segmented-control__button--active': weatherForm.locationMode === 'city',
+                }"
                 type="button"
                 @click="setLocationMode('city')"
               >
@@ -66,7 +64,9 @@
               </button>
               <button
                 class="segmented-control__button"
-                :class="{ 'segmented-control__button--active': weatherForm.locationMode === 'latlon' }"
+                :class="{
+                  'segmented-control__button--active': weatherForm.locationMode === 'latlon',
+                }"
                 type="button"
                 @click="setLocationMode('latlon')"
               >
@@ -171,11 +171,17 @@
                 <div>
                   <p class="integration-card__eyebrow">Spotify</p>
                   <p class="integration-card__title">Playback bridge</p>
-                  <p class="integration-card__copy">Uses your client credentials to mirror now playing.</p>
+                  <p class="integration-card__copy">
+                    Uses your client credentials to mirror now playing.
+                  </p>
                 </div>
                 <span
                   class="status-pill"
-                  :class="integrationStatus.spotify.connected ? 'status-pill--success' : 'status-pill--muted'"
+                  :class="
+                    integrationStatus.spotify.connected
+                      ? 'status-pill--success'
+                      : 'status-pill--muted'
+                  "
                 >
                   {{ integrationStatus.spotify.connected ? 'Connected' : 'Not connected' }}
                 </span>
@@ -213,9 +219,12 @@
                   </label>
                 </div>
                 <p class="form-hint">
-                  {{ integrationStatus.spotify.hasClientId && integrationStatus.spotify.hasClientSecret
-                    ? 'Credentials stored securely on this device.'
-                    : 'Add your app credentials to enable OAuth.' }}
+                  {{
+                    integrationStatus.spotify.hasClientId &&
+                    integrationStatus.spotify.hasClientSecret
+                      ? 'Credentials stored securely on this device.'
+                      : 'Add your app credentials to enable OAuth.'
+                  }}
                 </p>
 
                 <div class="settings-actions settings-actions--inline">
@@ -258,7 +267,11 @@
                 </div>
                 <span
                   class="status-pill"
-                  :class="integrationStatus.strava.connected ? 'status-pill--success' : 'status-pill--muted'"
+                  :class="
+                    integrationStatus.strava.connected
+                      ? 'status-pill--success'
+                      : 'status-pill--muted'
+                  "
                 >
                   {{ integrationStatus.strava.connected ? 'Connected' : 'Not connected' }}
                 </span>
@@ -357,7 +370,9 @@
                 </div>
                 <span
                   class="status-pill"
-                  :class="integrationToggles.weather ? 'status-pill--success' : 'status-pill--muted'"
+                  :class="
+                    integrationToggles.weather ? 'status-pill--success' : 'status-pill--muted'
+                  "
                 >
                   {{ integrationToggles.weather ? 'Active' : 'Paused' }}
                 </span>
@@ -374,7 +389,10 @@
                   {{ weatherSummary }}
                 </p>
                 <div class="settings-actions settings-actions--inline">
-                  <button class="settings-button settings-button--ghost" @click="currentSection = 'weather'">
+                  <button
+                    class="settings-button settings-button--ghost"
+                    @click="currentSection = 'weather'"
+                  >
                     Edit location
                   </button>
                   <button
@@ -398,7 +416,9 @@
           <div class="form-field form-field--inline">
             <div>
               <label class="form-label">Scheduled generation</label>
-              <p class="form-hint">Keeps fresh suggestions each day at {{ aiForm.autoGenerateTime }}.</p>
+              <p class="form-hint">
+                Keeps fresh suggestions each day at {{ aiForm.autoGenerateTime }}.
+              </p>
             </div>
             <TogglePill v-model="aiForm.autoGenerateEnabled" />
           </div>
@@ -433,7 +453,11 @@
               />
             </label>
             <p class="form-hint">
-              {{ hasStoredAIKey ? 'Stored securely on this device.' : 'Required to generate suggestions.' }}
+              {{
+                hasStoredAIKey
+                  ? 'Stored securely on this device.'
+                  : 'Required to generate suggestions.'
+              }}
             </p>
             <div class="settings-actions settings-actions--inline">
               <button class="settings-button" :disabled="aiKeySaving" @click="saveOpenAIKey">
@@ -452,15 +476,15 @@
 
           <div class="ai-actions">
             <div>
-              <p class="ai-actions__title">Need ideas right now?</p>
-              <p class="ai-actions__hint">Run the generator without waiting for the schedule.</p>
+              <p class="ai-actions__title">Refresh suggestions</p>
+              <p class="ai-actions__hint">Checks now without waiting for 12:00.</p>
             </div>
             <button
-              class="settings-button"
+              class="settings-button settings-button--ghost"
               :disabled="aiGenerating || !hasStoredAIKey"
               @click="generateNow"
             >
-              {{ aiGenerating ? 'Generating…' : 'Generate now' }}
+              {{ aiGenerating ? 'Refreshing…' : 'Refresh now' }}
             </button>
           </div>
         </template>
@@ -483,7 +507,11 @@
               <p class="settings-action-card__title">Export database</p>
               <p class="settings-action-card__copy">Makes a backup of your local data.</p>
             </div>
-            <button class="settings-button settings-button--ghost" :disabled="exportingDb" @click="exportDatabase">
+            <button
+              class="settings-button settings-button--ghost"
+              :disabled="exportingDb"
+              @click="exportDatabase"
+            >
               {{ exportingDb ? 'Exporting…' : 'Export' }}
             </button>
           </div>
@@ -491,7 +519,9 @@
           <div class="settings-action-card settings-action-card--danger">
             <div>
               <p class="settings-action-card__title">Reset to demo data</p>
-              <p class="settings-action-card__copy">Wipes current data and reseeds the built-in demo.</p>
+              <p class="settings-action-card__copy">
+                Wipes current data and reseeds the built-in demo.
+              </p>
             </div>
             <button class="settings-button settings-button--danger" @click="showResetModal = true">
               Reset data
@@ -526,7 +556,11 @@
       <p class="modal-warning__highlight">This action cannot be undone.</p>
     </div>
     <template #footer>
-      <button class="settings-button settings-button--ghost" type="button" @click="showResetModal = false">
+      <button
+        class="settings-button settings-button--ghost"
+        type="button"
+        @click="showResetModal = false"
+      >
         Cancel
       </button>
       <button
@@ -602,7 +636,9 @@ const navSections = [
 type SectionId = (typeof navSections)[number]['id']
 
 const currentSection = ref<SectionId>('general')
-const activeSection = computed(() => navSections.find(section => section.id === currentSection.value)!)
+const activeSection = computed(
+  () => navSections.find(section => section.id === currentSection.value)!
+)
 
 const { displayName, settings, fetchSnapshot, stravaData, weatherData } = useDashboard()
 
@@ -612,7 +648,9 @@ const integrationStatus = ref<IntegrationStatusResponse>({
   weather: { hasLocation: false, lastSync: null },
 })
 
-const integrationForms = reactive<Record<CredentialService, { clientId: string; clientSecret: string }>>({
+const integrationForms = reactive<
+  Record<CredentialService, { clientId: string; clientSecret: string }>
+>({
   spotify: { clientId: '', clientSecret: '' },
   strava: { clientId: '', clientSecret: '' },
 })
@@ -916,7 +954,10 @@ async function saveStravaTarget() {
   stravaTargetError.value = null
   stravaTargetSaving.value = true
   try {
-    await window.electronAPI.setSetting('strava_weekly_target', Math.round(stravaWeeklyTarget.value))
+    await window.electronAPI.setSetting(
+      'strava_weekly_target',
+      Math.round(stravaWeeklyTarget.value)
+    )
     await fetchSnapshot(true)
     showToast('success', 'Weekly target updated')
   } catch (error) {
@@ -1121,17 +1162,18 @@ async function saveSettingsPartial(partial: SettingsPatch) {
     throw new Error('Settings unavailable')
   }
 
-  const baseIntegrations: Settings['integrations'] =
-    base.integrations ?? {
-      spotify: { enabled: true },
-      strava: { enabled: true },
-      weather: { enabled: true },
-    }
+  const baseIntegrations: Settings['integrations'] = base.integrations ?? {
+    spotify: { enabled: true },
+    strava: { enabled: true },
+    weather: { enabled: true },
+  }
 
   const merged: Settings = {
     ...base,
     ...partial,
-    brightness: partial.brightness ? { ...base.brightness, ...partial.brightness } : base.brightness,
+    brightness: partial.brightness
+      ? { ...base.brightness, ...partial.brightness }
+      : base.brightness,
     notifications: partial.notifications
       ? { ...base.notifications, ...partial.notifications }
       : base.notifications,

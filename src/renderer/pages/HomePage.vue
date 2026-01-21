@@ -6,10 +6,7 @@
     <!-- Main Content -->
     <div class="home-page__main">
       <!-- Top Bar -->
-      <TopBar
-        :display-name="displayName"
-        @open-settings="openSettingsPanel"
-      >
+      <TopBar :display-name="displayName" @open-settings="openSettingsPanel">
         <!-- Page Indicator Dots -->
         <template #center>
           <div class="page-dots">
@@ -89,15 +86,18 @@
                       :data="stravaData.weekData"
                       :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
                       color="#14B8A6"
-                      gradient-start="rgba(20, 184, 166, 0.12)"
-                      gradient-end="rgba(20, 184, 166, 0)"
-                      :height="120"
+                      gradient-start="rgba(34, 197, 94, 0.14)"
+                      gradient-end="rgba(34, 197, 94, 0.02)"
+                      :height="140"
                       :show-points="true"
                       :min-value="0"
                     />
                   </div>
                   <div class="strava-chart__labels">
-                    <span v-for="day in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']" :key="day">
+                    <span
+                      v-for="day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+                      :key="day"
+                    >
                       {{ day }}
                     </span>
                   </div>
@@ -117,7 +117,7 @@
                       class="task-item"
                       :class="{
                         'task-item--completed': task.completed,
-                        'task-item--completing': completingTaskId === task.id
+                        'task-item--completing': completingTaskId === task.id,
                       }"
                       @click="toggleTask(task.id)"
                     >
@@ -149,12 +149,7 @@
                       @blur="handleInlineBlur"
                     />
                   </div>
-                  <button
-                    v-else
-                    class="task-add"
-                    type="button"
-                    @click.stop="startInlineAdd"
-                  >
+                  <button v-else class="task-add" type="button" @click.stop="startInlineAdd">
                     <Plus :size="14" />
                     <span>Add task</span>
                   </button>
@@ -207,7 +202,9 @@
                   <div class="bible-verse-container">
                     <div class="bible-verse-border" />
                     <p class="bible-verse">
-                      "{{ verseMain }}<span v-if="verseRest" class="bible-verse__rest">{{ verseRest }}</span>"
+                      "{{ verseMain
+                      }}<span v-if="verseRest" class="bible-verse__rest">{{ verseRest }}</span
+                      >"
                     </p>
                   </div>
                   <button
@@ -247,10 +244,10 @@
                 <MiniChart
                   :data="energyChart.data"
                   :labels="energyChart.labels"
-                  color="#10B981"
-                  gradient-start="rgba(16, 185, 129, 0.08)"
-                  gradient-end="rgba(16, 185, 129, 0)"
-                  :height="120"
+                  color="#22C55E"
+                  gradient-start="rgba(34, 197, 94, 0.12)"
+                  gradient-end="rgba(34, 197, 94, 0.02)"
+                  :height="140"
                   :smart-scale="false"
                   :min-value="0"
                 />
@@ -271,7 +268,10 @@
                 <!-- Weather States -->
                 <div class="weather-content">
                   <!-- Loading State -->
-                  <div v-if="!weatherData.temperature && !weatherData.condition" class="weather-loading">
+                  <div
+                    v-if="!weatherData.temperature && !weatherData.condition"
+                    class="weather-loading"
+                  >
                     <Cloud :size="40" class="weather-loading__icon" />
                     <span class="weather-loading__text">Loading weather...</span>
                   </div>
@@ -417,7 +417,10 @@
                 <template #headerRight>
                   <span class="tasks-count-pill">{{ completedToday.length }}</span>
                 </template>
-                <div v-if="completedToday.length" class="tasks-page__list tasks-page__list--compact">
+                <div
+                  v-if="completedToday.length"
+                  class="tasks-page__list tasks-page__list--compact"
+                >
                   <div
                     v-for="task in completedToday"
                     :key="task.id"
@@ -465,7 +468,7 @@
                 </div>
               </TileCard>
               <TileCard title="Recent readings" :interactive="false">
-                <div class="reading-history" v-if="verseHistory.length">
+                <div v-if="verseHistory.length" class="reading-history">
                   <div
                     v-for="entry in verseHistory"
                     :key="entry.reference"
@@ -492,7 +495,9 @@
                     <div class="music-now-playing__bar">
                       <div
                         class="music-now-playing__bar-fill"
-                        :style="{ width: `${(spotifyData.progressMs / spotifyData.durationMs) * 100}%` }"
+                        :style="{
+                          width: `${(spotifyData.progressMs / spotifyData.durationMs) * 100}%`,
+                        }"
                       />
                     </div>
                     <span>{{ formatDuration(spotifyData.durationMs) }}</span>
@@ -600,8 +605,8 @@
       </div>
     </ModalSheet>
 
-    <!-- AI Suggestions Modal -->
-    <ModalSheet v-model="showAISuggestionsModal" title="AI Suggestions">
+    <!-- Suggestions Modal -->
+    <ModalSheet v-model="showAISuggestionsModal" title="Suggestions">
       <div v-if="pendingAISuggestions.length > 0" class="ai-modal-list">
         <div v-for="suggestion in pendingAISuggestions" :key="suggestion.id" class="ai-modal-item">
           <div class="ai-modal-body">
@@ -616,7 +621,6 @@
       </div>
       <p v-else class="ai-modal-empty">No suggestions right now.</p>
     </ModalSheet>
-
   </div>
 </template>
 
@@ -663,7 +667,6 @@ type ToastHandle = {
   info: (message: string, description?: string) => void
   warning: (message: string, description?: string) => void
 }
-
 
 // Dashboard data from main process
 const {
@@ -809,8 +812,6 @@ const completedToday = computed(() => todayTasks.value.filter(task => task.compl
 const oneOffTasks = computed(() =>
   tasks.value.filter(task => task.type === 'oneoff' && task.isActive)
 )
-
-
 
 // Task toggle handler with animation
 function toggleTask(id: string) {
@@ -1289,9 +1290,15 @@ const latestSleepMinutes = computed(() => {
 }
 
 @keyframes check-pop {
-  0% { transform: scale(0.8); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .task-checkbox {
@@ -1872,8 +1879,13 @@ const latestSleepMinutes = computed(() => {
 }
 
 @keyframes weather-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .weather-loading__text {
@@ -2007,7 +2019,6 @@ const latestSleepMinutes = computed(() => {
   border-color: rgba(255, 255, 255, 0.2);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
 }
-
 
 .task-type-buttons {
   display: flex;

@@ -1,8 +1,11 @@
 <template>
-  <TileCard title="AI Inbox" :icon="Zap" class="ai-inbox-tile" size="md" :interactive="false">
+  <TileCard title="Suggestions" :icon="Zap" class="ai-inbox-tile" size="md" :interactive="false">
     <template #headerRight>
       <div class="ai-inbox-header-actions">
-        <span class="ai-inbox-count" :class="{ 'ai-inbox-count--has-items': suggestions.length > 0 }">
+        <span
+          class="ai-inbox-count"
+          :class="{ 'ai-inbox-count--has-items': suggestions.length > 0 }"
+        >
           {{ suggestions.length > 0 ? suggestions.length : '—' }}
         </span>
         <button
@@ -11,7 +14,7 @@
           :disabled="generating"
           @click="emit('generate')"
         >
-          {{ generating ? 'Generating…' : 'Generate' }}
+          {{ generating ? 'Refreshing…' : 'Refresh' }}
         </button>
       </div>
     </template>
@@ -28,7 +31,10 @@
           v-for="suggestion in displayedSuggestions"
           :key="suggestion.id"
           class="ai-inbox-item"
-          :class="{ 'ai-inbox-item--accepting': acceptingId === suggestion.id, 'ai-inbox-item--dismissing': dismissingId === suggestion.id }"
+          :class="{
+            'ai-inbox-item--accepting': acceptingId === suggestion.id,
+            'ai-inbox-item--dismissing': dismissingId === suggestion.id,
+          }"
         >
           <div class="ai-inbox-item__content">
             <span class="ai-inbox-item__title">{{ suggestion.title }}</span>
@@ -151,6 +157,7 @@ function handleViewAll() {
 <style scoped>
 .ai-inbox-tile {
   min-height: 140px;
+  padding-top: var(--space-sm);
 }
 
 .ai-inbox-header-actions {
@@ -188,6 +195,7 @@ function handleViewAll() {
   transition:
     background-color var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .ai-inbox-generate:disabled {
@@ -246,7 +254,8 @@ function handleViewAll() {
 }
 
 .ai-inbox-item + .ai-inbox-item {
-  margin-top: 4px;
+  margin-top: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .ai-inbox-item:hover {
@@ -298,7 +307,7 @@ function handleViewAll() {
 
 .ai-inbox-item__title {
   font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;

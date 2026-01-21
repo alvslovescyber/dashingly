@@ -45,7 +45,7 @@
   /* Tiles: NO BLUR, Stronger Gradient */
   --glass-tile: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.1) 0%,
     rgba(255, 255, 255, 0.04) 100%
   );
   --glass-tile-hover: linear-gradient(
@@ -84,7 +84,7 @@
   /* Text - STRONGER HIERARCHY (bumped for better legibility) */
   --text-primary: rgba(255, 255, 255, 0.96);
   --text-secondary: rgba(255, 255, 255, 0.72);
-  --text-tertiary: rgba(255, 255, 255, 0.50);
+  --text-tertiary: rgba(255, 255, 255, 0.5);
   --text-muted: rgba(255, 255, 255, 0.35);
 
   /* Animation */
@@ -255,11 +255,21 @@ body {
 .stagger-item {
   animation: slideUp var(--duration-normal) var(--ease-out) both;
 }
-.stagger-item:nth-child(1) { animation-delay: 0ms; }
-.stagger-item:nth-child(2) { animation-delay: 50ms; }
-.stagger-item:nth-child(3) { animation-delay: 100ms; }
-.stagger-item:nth-child(4) { animation-delay: 150ms; }
-.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger-item:nth-child(2) {
+  animation-delay: 50ms;
+}
+.stagger-item:nth-child(3) {
+  animation-delay: 100ms;
+}
+.stagger-item:nth-child(4) {
+  animation-delay: 150ms;
+}
+.stagger-item:nth-child(5) {
+  animation-delay: 200ms;
+}
 
 /* Prevent image drag */
 img {

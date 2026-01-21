@@ -18,12 +18,7 @@
     <!-- Right: Actions -->
     <div class="top-bar__right">
       <IconButton :icon="Mic" size="md" variant="ghost" />
-      <IconButton
-        :icon="SettingsIcon"
-        size="md"
-        variant="ghost"
-        @click="$emit('openSettings')"
-      />
+      <IconButton :icon="SettingsIcon" size="md" variant="ghost" @click="$emit('openSettings')" />
 
       <div class="top-bar__avatar">
         <User :size="18" :stroke-width="1.75" />
@@ -123,7 +118,7 @@ defineEmits<{
   width: 38px;
   height: 38px;
   margin-left: 6px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   color: var(--text-secondary);

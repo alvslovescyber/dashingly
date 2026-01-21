@@ -105,12 +105,12 @@ function handleNavClick(route: string) {
   justify-content: center;
   width: 38px;
   height: 38px;
-  background: linear-gradient(135deg, var(--color-blue) 0%, #1d7cf2 100%);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  color: var(--color-white);
+  color: var(--text-primary);
   box-shadow:
-    0 4px 12px rgba(59, 130, 246, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .sidebar__nav {

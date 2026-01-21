@@ -42,14 +42,13 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   color: '#3B82F6',
-  gradientStart: 'rgba(59, 130, 246, 0.15)',
-  gradientEnd: 'rgba(59, 130, 246, 0)',
+  gradientStart: 'rgba(34, 197, 94, 0.14)',
+  gradientEnd: 'rgba(34, 197, 94, 0)',
   showPoints: false,
-  height: 80,
+  height: 140,
   smartScale: true,
   minValue: undefined,
 })
-
 
 const canvas = ref<HTMLCanvasElement>()
 let chart: Chart | null = null
@@ -107,7 +106,7 @@ function createChart() {
       responsive: true,
       maintainAspectRatio: false,
       animation: {
-        duration: 800,
+        duration: 600,
         easing: 'easeOutQuart',
       },
       plugins: {
@@ -121,7 +120,7 @@ function createChart() {
           backgroundColor: 'rgba(15, 23, 42, 0.95)',
           titleColor: 'rgba(255, 255, 255, 0.95)',
           bodyColor: 'rgba(255, 255, 255, 0.85)',
-          titleFont: { size: 12, weight: 600, family: 'Inter' },
+          titleFont: { size: 11, weight: 600, family: 'Inter' },
           bodyFont: { size: 14, weight: 700, family: 'Inter' },
           cornerRadius: 8,
           borderColor: 'rgba(255, 255, 255, 0.12)',
@@ -144,12 +143,12 @@ function createChart() {
           display: true,
           grid: {
             display: true,
-            color: 'rgba(255, 255, 255, 0.06)',
-            lineWidth: 1,
+            color: 'rgba(255, 255, 255, 0.04)',
+            lineWidth: 0.5,
           },
           ticks: {
             display: true,
-            color: 'rgba(255, 255, 255, 0.4)',
+            color: 'rgba(255, 255, 255, 0.35)',
             font: { size: 10, family: 'Inter' },
             maxTicksLimit: 4,
             padding: 8,
@@ -160,9 +159,9 @@ function createChart() {
       },
       elements: {
         point: {
-          radius: 0,
+          radius: props.showPoints ? 3 : 0,
           hitRadius: 30, // Larger hit area for touch
-          hoverRadius: 5,
+          hoverRadius: 7,
           backgroundColor: props.color,
           borderWidth: 2,
           borderColor: '#FFF',

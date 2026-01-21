@@ -92,14 +92,17 @@ onMounted(() => {
 })
 
 // Re-animate when value changes significantly
-watch(() => props.value, (newVal, oldVal) => {
-  if (Math.abs(newVal - oldVal) > 5) {
-    isAnimated.value = false
-    setTimeout(() => {
-      isAnimated.value = true
-    }, 50)
+watch(
+  () => props.value,
+  (newVal, oldVal) => {
+    if (Math.abs(newVal - oldVal) > 5) {
+      isAnimated.value = false
+      setTimeout(() => {
+        isAnimated.value = true
+      }, 50)
+    }
   }
-})
+)
 </script>
 
 <style scoped>
