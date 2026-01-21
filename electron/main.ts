@@ -7,7 +7,9 @@ import {
   closeDatabase,
   getSetting,
   setSetting,
+  deleteSetting,
   getDatabasePath,
+  getLastSync,
 } from '../src/main/db/database'
 import { getDashboardSnapshot } from '../src/main/db/snapshot'
 import { seedDatabase } from '../src/main/db/seed'
@@ -30,6 +32,7 @@ import {
 } from '../src/main/integrations/weather'
 import { generateTaskSuggestions, canRunAI } from '../src/main/integrations/ai-tasks'
 import { clearSecureValue, hasSecureValue, saveSecureValue } from '../src/main/security/secure-store'
+import { startAuthServer, stopAuthServer, getAuthServerInfo } from '../src/main/auth/oauth-server'
 import type { WeatherSettings } from '../src/shared/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -52,6 +55,63 @@ const KIOSK_HEIGHT = 480
 const IS_PI = process.platform === 'linux' && process.arch === 'arm64'
 
 let mainWindow: BrowserWindow | null
+let authServerReady = false
+
+type CredentialService = 'spotify' | 'strava'
+
+const integrationSecretKeys: Record<CredentialService, { clientId: string; clientSecret: string }> = {
+  spotify: { clientId: 'spotify_client_id', clientSecret: 'spotify_client_secret' },
+  strava: { clientId: 'strava_client_id', clientSecret: 'strava_client_secret' },
+}
+
+function persistSecret(key: string, value: string | null | undefined) {
+  if (value === undefined) return
+  if (!value || !value.trim()) {
+    clearSecureValue(key)
+    return
+  }
+  saveSecureValue(key, value.trim())
+}
+
+function getIntegrationStatusPayload() {
+  const weatherSettings = getWeatherSettings()
+  return {
+    spotify: {
+      connected: getSetting<boolean>('spotify_connected', false),
+      lastSync: getLastSync('spotify'),
+      hasClientId: hasSecureValue('spotify_client_id') || Boolean(process.env.SPOTIFY_CLIENT_ID),
+      hasClientSecret:
+        hasSecureValue('spotify_client_secret') || Boolean(process.env.SPOTIFY_CLIENT_SECRET),
+    },
+    strava: {
+      connected: getSetting<boolean>('strava_connected', false),
+      lastSync: getLastSync('strava'),
+      hasClientId: hasSecureValue('strava_client_id') || Boolean(process.env.STRAVA_CLIENT_ID),
+      hasClientSecret:
+        hasSecureValue('strava_client_secret') || Boolean(process.env.STRAVA_CLIENT_SECRET),
+    },
+    weather: {
+      hasLocation: Boolean(weatherSettings.cityName || weatherSettings.latitude),
+      lastSync: getLastSync('weather'),
+    },
+  }
+}
+
+function disconnectIntegration(service: CredentialService) {
+  switch (service) {
+    case 'spotify':
+      deleteSetting('spotify_tokens')
+      setSetting('spotify_connected', false)
+      break
+    case 'strava':
+      deleteSetting('strava_tokens')
+      deleteSetting('strava_athlete')
+      setSetting('strava_connected', false)
+      break
+    default:
+      throw new Error(`Unsupported integration: ${service}`)
+  }
+}
 
 function createWindow() {
   // Window options based on environment
@@ -172,6 +232,100 @@ function setupIPC() {
     return searchCities(query)
   })
 
+  // Integrations and credentials
+  ipcMain.handle('get-integration-status', () => {
+    return getIntegrationStatusPayload()
+  })
+
+  ipcMain.handle(
+    'set-integration-credentials',
+    async (
+      _event,
+      payload: { service: CredentialService; clientId?: string | null; clientSecret?: string | null }
+    ) => {
+      const keys = integrationSecretKeys[payload.service]
+      if (!keys) {
+        throw new Error(`Unknown integration: ${payload.service}`)
+      }
+      persistSecret(keys.clientId, payload.clientId)
+      persistSecret(keys.clientSecret, payload.clientSecret)
+      return { success: true }
+    }
+  )
+
+  ipcMain.handle('disconnect-integration', async (_event, service: CredentialService) => {
+    disconnectIntegration(service)
+    return { success: true }
+  })
+
+  ipcMain.handle('test-integration', async (_event, service: string) => {
+    switch (service) {
+      case 'spotify': {
+        const connected = getSetting<boolean>('spotify_connected', false)
+        const lastSync = getLastSync('spotify')
+        return {
+          success: connected,
+          message: connected
+            ? lastSync
+              ? `Last playback ${new Date(lastSync).toLocaleString()}`
+              : 'Connected. Waiting for playback data.'
+            : 'Spotify is not connected.',
+        }
+      }
+      case 'strava': {
+        const connected = getSetting<boolean>('strava_connected', false)
+        const lastSync = getLastSync('strava')
+        return {
+          success: connected,
+          message: connected
+            ? lastSync
+              ? `Last sync ${new Date(lastSync).toLocaleString()}`
+              : 'Connected. Waiting for your first sync.'
+            : 'Strava is not connected.',
+        }
+      }
+      case 'weather': {
+        await getWeatherStatus()
+        const lastSync = getLastSync('weather')
+        return {
+          success: true,
+          message: lastSync
+            ? `Weather refreshed ${new Date(lastSync).toLocaleString()}`
+            : 'Weather will update shortly.',
+        }
+      }
+      default:
+        return { success: false, message: 'Unknown integration' }
+    }
+  })
+
+  ipcMain.handle('get-strava-status', () => getIntegrationStatusPayload().strava)
+  ipcMain.handle('get-spotify-status', () => getIntegrationStatusPayload().spotify)
+
+  ipcMain.handle('disconnect-spotify', () => {
+    disconnectIntegration('spotify')
+  })
+
+  ipcMain.handle('disconnect-strava', () => {
+    disconnectIntegration('strava')
+  })
+
+  ipcMain.handle('get-strava-auth-url', () => {
+    if (!authServerReady) {
+      throw new Error('Auth server is not ready yet')
+    }
+    const { baseUrl } = getAuthServerInfo()
+    return `${baseUrl}/oauth/strava/start`
+  })
+
+  ipcMain.handle('get-spotify-auth-url', () => {
+    if (!authServerReady) {
+      throw new Error('Auth server is not ready yet')
+    }
+    const { baseUrl } = getAuthServerInfo()
+    return `${baseUrl}/oauth/spotify/start`
+  })
+
   // Task actions
   ipcMain.handle('complete-task', async (_event, taskId: string) => {
     completeTask(taskId)
@@ -286,6 +440,16 @@ app.whenReady().then(() => {
   }
 
   setupIPC()
+
+  startAuthServer()
+    .then(() => {
+      authServerReady = true
+    })
+    .catch(error => {
+      authServerReady = false
+      console.error('Failed to start auth server', error)
+    })
+
   createWindow()
 
   app.on('activate', () => {
@@ -298,6 +462,9 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   // Close database before quitting
   closeDatabase()
+  stopAuthServer().catch(error => {
+    console.error('Failed to stop auth server', error)
+  })
 
   if (process.platform !== 'darwin') {
     app.quit()

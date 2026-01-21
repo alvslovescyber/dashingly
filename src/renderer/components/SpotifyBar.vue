@@ -53,9 +53,9 @@
 
         <!-- Track Info - Vertically Centered -->
         <div class="spotify-tile__info">
-          <span class="spotify-tile__label">NOW PLAYING</span>
-          <p class="spotify-tile__track">{{ hasTrack ? track : 'Nothing playing' }}</p>
-          <p class="spotify-tile__artist">{{ hasTrack ? artist : 'Play something on Spotify' }}</p>
+          <span class="spotify-tile__label">Now playing</span>
+          <p class="spotify-tile__track">{{ track }}</p>
+          <p class="spotify-tile__artist">{{ artist }}</p>
         </div>
       </div>
 
@@ -64,7 +64,7 @@
         <div class="spotify-tile__progress-bar">
           <div class="spotify-tile__progress-fill" :style="{ width: `${progressPercent}%` }" />
         </div>
-        <div v-if="hasTrack" class="spotify-tile__times">
+        <div class="spotify-tile__times">
           <span>{{ formatTime(progressMs) }}</span>
           <span>{{ formatTime(durationMs) }}</span>
         </div>
@@ -268,13 +268,13 @@ function handleArtError(event: Event) {
 .spotify-tile__label {
   font-size: 10px;
   font-weight: var(--font-semibold);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #1db954;
+  color: var(--text-tertiary);
 }
 
 .spotify-tile__track {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: var(--font-semibold);
   color: var(--color-white);
   margin: 0;
@@ -286,7 +286,7 @@ function handleArtError(event: Event) {
 
 .spotify-tile__artist {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -298,6 +298,7 @@ function handleArtError(event: Event) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-bottom: 4px;
 }
 
 .spotify-tile__progress-bar {

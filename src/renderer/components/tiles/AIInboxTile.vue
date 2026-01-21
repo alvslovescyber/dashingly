@@ -32,7 +32,9 @@
         >
           <div class="ai-inbox-item__content">
             <span class="ai-inbox-item__title">{{ suggestion.title }}</span>
-            <span class="ai-inbox-item__reason">{{ truncateReason(suggestion.reason) }}</span>
+            <span class="ai-inbox-item__reason">
+              {{ formatReason(suggestion.reason) }}
+            </span>
           </div>
           <div class="ai-inbox-item__actions">
             <button
@@ -41,7 +43,7 @@
               :disabled="acceptingId === suggestion.id || dismissingId === suggestion.id"
               @click="handleAccept(suggestion.id)"
             >
-              <Check :size="14" :stroke-width="2.5" />
+              <Check :size="12" :stroke-width="2.4" />
             </button>
             <button
               class="ai-inbox-btn ai-inbox-btn--dismiss"
@@ -49,7 +51,7 @@
               :disabled="acceptingId === suggestion.id || dismissingId === suggestion.id"
               @click="handleDismiss(suggestion.id)"
             >
-              <X :size="14" :stroke-width="2.5" />
+              <X :size="12" :stroke-width="2.4" />
             </button>
           </div>
         </div>
@@ -119,6 +121,10 @@ function truncateReason(reason: string, maxLength = 45): string {
   return reason.slice(0, maxLength).trim() + '…'
 }
 
+function formatReason(reason: string): string {
+  return `Why: ${truncateReason(reason)}`
+}
+
 function handleAccept(id: string) {
   acceptingId.value = id
   // Emit after brief animation delay
@@ -171,24 +177,27 @@ function handleViewAll() {
 }
 
 .ai-inbox-generate {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: var(--radius-full);
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
 .ai-inbox-generate:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .ai-inbox-generate:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .ai-inbox-content {
@@ -229,11 +238,15 @@ function handleViewAll() {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding: 8px 10px;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: var(--radius-sm);
-  border: 1px solid transparent;
+  border: 1px solid rgba(255, 255, 255, 0.02);
   transition: all var(--duration-fast) var(--ease-out);
+}
+
+.ai-inbox-item + .ai-inbox-item {
+  margin-top: 4px;
 }
 
 .ai-inbox-item:hover {

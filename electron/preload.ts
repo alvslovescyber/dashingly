@@ -18,6 +18,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setWeatherSettings: (settings: WeatherSettings) =>
     ipcRenderer.invoke('set-weather-settings', settings),
   searchCities: (query: string) => ipcRenderer.invoke('search-cities', query),
+  getIntegrationStatus: () => ipcRenderer.invoke('get-integration-status'),
+  setIntegrationCredentials: (payload: {
+    service: 'spotify' | 'strava'
+    clientId?: string | null
+    clientSecret?: string | null
+  }) => ipcRenderer.invoke('set-integration-credentials', payload),
+  testIntegration: (service: 'spotify' | 'strava' | 'weather') =>
+    ipcRenderer.invoke('test-integration', service),
+  disconnectIntegration: (service: 'spotify' | 'strava') =>
+    ipcRenderer.invoke('disconnect-integration', service),
 
   // Tasks
   getTasks: () => ipcRenderer.invoke('get-tasks'),
@@ -92,6 +102,18 @@ declare global {
       getWeatherSettings: () => Promise<WeatherSettings>
       setWeatherSettings: (settings: WeatherSettings) => Promise<void>
       searchCities: (query: string) => Promise<Array<{ name: string; latitude: number; longitude: number }>>
+      getIntegrationStatus: () => Promise<{
+        spotify: { connected: boolean; lastSync: number | null; hasClientId: boolean; hasClientSecret: boolean }
+        strava: { connected: boolean; lastSync: number | null; hasClientId: boolean; hasClientSecret: boolean }
+        weather: { hasLocation: boolean; lastSync: number | null }
+      }>
+      setIntegrationCredentials: (payload: {
+        service: 'spotify' | 'strava'
+        clientId?: string | null
+        clientSecret?: string | null
+      }) => Promise<{ success: boolean }>
+      testIntegration: (service: 'spotify' | 'strava' | 'weather') => Promise<{ success: boolean; message: string }>
+      disconnectIntegration: (service: 'spotify' | 'strava') => Promise<{ success: boolean }>
       getTasks: () => Promise<unknown[]>
       createTask: (task: unknown) => Promise<string>
       updateTask: (id: string, updates: unknown) => Promise<void>

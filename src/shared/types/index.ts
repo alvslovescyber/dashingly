@@ -17,6 +17,16 @@ export interface WeatherSettings {
   units: 'metric' | 'imperial'
 }
 
+export interface IntegrationToggle {
+  enabled: boolean
+}
+
+export interface IntegrationSettings {
+  spotify: IntegrationToggle
+  strava: IntegrationToggle
+  weather: IntegrationToggle
+}
+
 export interface Settings {
   mockMode: boolean
   debugMode: boolean
@@ -35,6 +45,7 @@ export interface Settings {
   }
   weather: WeatherSettings
   ai: AIConfig
+  integrations: IntegrationSettings
 }
 
 // ============================================

@@ -32,10 +32,16 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   const timezone = getSetting<string>('timezone', 'America/New_York')
 
   // Settings
-  const storedSettings = getSetting<Settings>('settings', getDefaultSettings())
+  const defaults = getDefaultSettings()
+  const storedSettings = getSetting<Settings>('settings', defaults)
   const weatherSettings = getWeatherSettings()
   const settings: Settings = {
+    ...defaults,
     ...storedSettings,
+    brightness: { ...defaults.brightness, ...storedSettings?.brightness },
+    notifications: { ...defaults.notifications, ...storedSettings?.notifications },
+    ai: { ...defaults.ai, ...storedSettings?.ai },
+    integrations: { ...defaults.integrations, ...storedSettings?.integrations },
     weather: weatherSettings,
   }
 
@@ -186,6 +192,11 @@ export function getDefaultSettings(): Settings {
       maxSuggestionsPerDay: 5,
       autoGenerateEnabled: true,
       autoGenerateTime: '12:00',
+    },
+    integrations: {
+      spotify: { enabled: true },
+      strava: { enabled: true },
+      weather: { enabled: true },
     },
   }
 }

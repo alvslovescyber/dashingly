@@ -4,6 +4,7 @@ import QRCode from 'qrcode'
 import { setSetting } from '../db/database'
 import { validateHealthPayload } from '../../shared/schemas'
 import type { OAuthTokens } from '../../shared/types'
+import { getSecureValue } from '../security/secure-store'
 
 let server: ReturnType<typeof express.application.listen> | null = null
 const app = express()
@@ -24,12 +25,16 @@ function getLocalIP(): string {
   return '127.0.0.1'
 }
 
+function resolveCredential(envKey: string, secureKey: string): string | null {
+  return process.env[envKey] || getSecureValue(secureKey)
+}
+
 // ============================================
 // STRAVA OAUTH
 // ============================================
 
 app.get('/oauth/strava/start', (_req: Request, res: Response): void => {
-  const clientId = process.env.STRAVA_CLIENT_ID
+  const clientId = resolveCredential('STRAVA_CLIENT_ID', 'strava_client_id')
   if (!clientId) {
     res.status(500).send('Strava client ID not configured')
     return
@@ -76,8 +81,8 @@ app.get('/oauth/strava/callback', async (req: Request, res: Response): Promise<v
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        client_id: process.env.STRAVA_CLIENT_ID,
-        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        client_id: resolveCredential('STRAVA_CLIENT_ID', 'strava_client_id'),
+        client_secret: resolveCredential('STRAVA_CLIENT_SECRET', 'strava_client_secret'),
         code,
         grant_type: 'authorization_code',
       }),
@@ -128,7 +133,7 @@ app.get('/oauth/strava/callback', async (req: Request, res: Response): Promise<v
 // ============================================
 
 app.get('/oauth/spotify/start', (_req: Request, res: Response): void => {
-  const clientId = process.env.SPOTIFY_CLIENT_ID
+  const clientId = resolveCredential('SPOTIFY_CLIENT_ID', 'spotify_client_id')
   if (!clientId) {
     res.status(500).send('Spotify client ID not configured')
     return
@@ -174,9 +179,13 @@ app.get('/oauth/spotify/callback', async (req: Request, res: Response): Promise<
     const redirectUri = `http://${ip}:${port}/oauth/spotify/callback`
 
     // Exchange code for tokens
-    const credentials = Buffer.from(
-      `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
-    ).toString('base64')
+    const spotifyClientId = resolveCredential('SPOTIFY_CLIENT_ID', 'spotify_client_id')
+    const spotifyClientSecret = resolveCredential('SPOTIFY_CLIENT_SECRET', 'spotify_client_secret')
+    if (!spotifyClientId || !spotifyClientSecret) {
+      throw new Error('Spotify client credentials not configured')
+    }
+
+    const credentials = Buffer.from(`${spotifyClientId}:${spotifyClientSecret}`).toString('base64')
 
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',

@@ -96,6 +96,11 @@
                       :min-value="0"
                     />
                   </div>
+                  <div class="strava-chart__labels">
+                    <span v-for="day in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']" :key="day">
+                      {{ day }}
+                    </span>
+                  </div>
                 </div>
               </TileCard>
 
@@ -242,6 +247,9 @@
                 <MiniChart
                   :data="energyChart.data"
                   :labels="energyChart.labels"
+                  color="#10B981"
+                  gradient-start="rgba(16, 185, 129, 0.08)"
+                  gradient-end="rgba(16, 185, 129, 0)"
                   :height="120"
                   :smart-scale="false"
                   :min-value="0"
@@ -1182,6 +1190,21 @@ const latestSleepMinutes = computed(() => {
   flex: 1;
   display: flex;
   align-items: flex-end;
+}
+
+.strava-chart__labels {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-top: 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  gap: 4px;
+}
+
+.strava-chart__labels span {
+  text-align: center;
 }
 
 .tile--tasks {

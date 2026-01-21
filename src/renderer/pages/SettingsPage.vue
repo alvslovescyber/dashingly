@@ -162,6 +162,237 @@
           </div>
         </template>
 
+        <!-- Integrations -->
+        <template v-else-if="currentSection === 'integrations'">
+          <div class="integration-grid">
+            <!-- Spotify -->
+            <article class="integration-card">
+              <div class="integration-card__header">
+                <div>
+                  <p class="integration-card__eyebrow">Spotify</p>
+                  <p class="integration-card__title">Playback bridge</p>
+                  <p class="integration-card__copy">Uses your client credentials to mirror now playing.</p>
+                </div>
+                <span
+                  class="status-pill"
+                  :class="integrationStatus.spotify.connected ? 'status-pill--success' : 'status-pill--muted'"
+                >
+                  {{ integrationStatus.spotify.connected ? 'Connected' : 'Not connected' }}
+                </span>
+              </div>
+
+              <div class="integration-card__body">
+                <div class="integration-card__row">
+                  <span class="integration-card__label">Enabled</span>
+                  <TogglePill
+                    :model-value="integrationToggles.spotify"
+                    @update:model-value="value => handleIntegrationToggle('spotify', value)"
+                  />
+                </div>
+
+                <div class="form-grid">
+                  <label class="form-label">
+                    Client ID
+                    <input
+                      v-model="integrationForms.spotify.clientId"
+                      class="form-input"
+                      type="text"
+                      placeholder="123abc..."
+                      autocomplete="off"
+                    />
+                  </label>
+                  <label class="form-label">
+                    Client secret
+                    <input
+                      v-model="integrationForms.spotify.clientSecret"
+                      class="form-input"
+                      type="password"
+                      placeholder="••••••••"
+                      autocomplete="off"
+                    />
+                  </label>
+                </div>
+                <p class="form-hint">
+                  {{ integrationStatus.spotify.hasClientId && integrationStatus.spotify.hasClientSecret
+                    ? 'Credentials stored securely on this device.'
+                    : 'Add your app credentials to enable OAuth.' }}
+                </p>
+
+                <div class="settings-actions settings-actions--inline">
+                  <button
+                    class="settings-button"
+                    :disabled="integrationSaving.spotify"
+                    @click="saveIntegrationCredentials('spotify')"
+                  >
+                    {{ integrationSaving.spotify ? 'Saving…' : 'Save credentials' }}
+                  </button>
+                  <button
+                    class="settings-button settings-button--ghost"
+                    :disabled="testingIntegration === 'spotify'"
+                    @click="testIntegration('spotify')"
+                  >
+                    {{ testingIntegration === 'spotify' ? 'Testing…' : 'Test connection' }}
+                  </button>
+                  <button
+                    v-if="integrationStatus.spotify.connected"
+                    class="settings-button settings-button--text"
+                    type="button"
+                    @click="disconnectService('spotify')"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+                <p class="integration-card__foot">
+                  Last sync: {{ formatRelativeTimestamp(integrationStatus.spotify.lastSync) }}
+                </p>
+              </div>
+            </article>
+
+            <!-- Strava -->
+            <article class="integration-card">
+              <div class="integration-card__header">
+                <div>
+                  <p class="integration-card__eyebrow">Strava</p>
+                  <p class="integration-card__title">Weekly running data</p>
+                  <p class="integration-card__copy">Syncs runs + goals for the activity tiles.</p>
+                </div>
+                <span
+                  class="status-pill"
+                  :class="integrationStatus.strava.connected ? 'status-pill--success' : 'status-pill--muted'"
+                >
+                  {{ integrationStatus.strava.connected ? 'Connected' : 'Not connected' }}
+                </span>
+              </div>
+
+              <div class="integration-card__body">
+                <div class="integration-card__row">
+                  <span class="integration-card__label">Enabled</span>
+                  <TogglePill
+                    :model-value="integrationToggles.strava"
+                    @update:model-value="value => handleIntegrationToggle('strava', value)"
+                  />
+                </div>
+
+                <div class="form-grid">
+                  <label class="form-label">
+                    Client ID
+                    <input
+                      v-model="integrationForms.strava.clientId"
+                      class="form-input"
+                      type="text"
+                      placeholder="12345"
+                      autocomplete="off"
+                    />
+                  </label>
+                  <label class="form-label">
+                    Client secret
+                    <input
+                      v-model="integrationForms.strava.clientSecret"
+                      class="form-input"
+                      type="password"
+                      placeholder="••••••••"
+                      autocomplete="off"
+                    />
+                  </label>
+                </div>
+
+                <div class="form-field">
+                  <label class="form-label">
+                    Weekly target (km)
+                    <input
+                      v-model.number="stravaWeeklyTarget"
+                      class="form-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                    />
+                  </label>
+                  <p v-if="stravaTargetError" class="form-error">{{ stravaTargetError }}</p>
+                </div>
+
+                <div class="settings-actions settings-actions--inline">
+                  <button
+                    class="settings-button"
+                    :disabled="integrationSaving.strava"
+                    @click="saveIntegrationCredentials('strava')"
+                  >
+                    {{ integrationSaving.strava ? 'Saving…' : 'Save credentials' }}
+                  </button>
+                  <button
+                    class="settings-button settings-button--ghost"
+                    :disabled="stravaTargetSaving"
+                    @click="saveStravaTarget"
+                  >
+                    {{ stravaTargetSaving ? 'Saving…' : 'Save target' }}
+                  </button>
+                  <button
+                    class="settings-button settings-button--ghost"
+                    :disabled="testingIntegration === 'strava'"
+                    @click="testIntegration('strava')"
+                  >
+                    {{ testingIntegration === 'strava' ? 'Testing…' : 'Test connection' }}
+                  </button>
+                  <button
+                    v-if="integrationStatus.strava.connected"
+                    class="settings-button settings-button--text"
+                    type="button"
+                    @click="disconnectService('strava')"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+                <p class="integration-card__foot">
+                  Last sync: {{ formatRelativeTimestamp(integrationStatus.strava.lastSync) }}
+                </p>
+              </div>
+            </article>
+
+            <!-- Weather summary -->
+            <article class="integration-card integration-card--compact">
+              <div class="integration-card__header">
+                <div>
+                  <p class="integration-card__eyebrow">Weather</p>
+                  <p class="integration-card__title">Location + units</p>
+                  <p class="integration-card__copy">Powered by Open-Meteo with your chosen city.</p>
+                </div>
+                <span
+                  class="status-pill"
+                  :class="integrationToggles.weather ? 'status-pill--success' : 'status-pill--muted'"
+                >
+                  {{ integrationToggles.weather ? 'Active' : 'Paused' }}
+                </span>
+              </div>
+              <div class="integration-card__body">
+                <div class="integration-card__row">
+                  <span class="integration-card__label">Enabled</span>
+                  <TogglePill
+                    :model-value="integrationToggles.weather"
+                    @update:model-value="value => handleIntegrationToggle('weather', value)"
+                  />
+                </div>
+                <p class="integration-weather-summary">
+                  {{ weatherSummary }}
+                </p>
+                <div class="settings-actions settings-actions--inline">
+                  <button class="settings-button settings-button--ghost" @click="currentSection = 'weather'">
+                    Edit location
+                  </button>
+                  <button
+                    class="settings-button settings-button--ghost"
+                    :disabled="testingIntegration === 'weather'"
+                    @click="testIntegration('weather')"
+                  >
+                    {{ testingIntegration === 'weather' ? 'Refreshing…' : 'Refresh weather' }}
+                  </button>
+                </div>
+                <p class="integration-card__foot">
+                  Last update: {{ formatRelativeTimestamp(integrationStatus.weather.lastSync) }}
+                </p>
+              </div>
+            </article>
+          </div>
+        </template>
+
         <!-- AI -->
         <template v-else-if="currentSection === 'ai'">
           <div class="form-field form-field--inline">
@@ -324,15 +555,44 @@ type ToastHandle = {
   warning: (message: string, description?: string) => void
 }
 
+type CredentialService = 'spotify' | 'strava'
+type IntegrationService = CredentialService | 'weather'
+
+type IntegrationStatusResponse = {
+  spotify: {
+    connected: boolean
+    lastSync: number | null
+    hasClientId: boolean
+    hasClientSecret: boolean
+  }
+  strava: {
+    connected: boolean
+    lastSync: number | null
+    hasClientId: boolean
+    hasClientSecret: boolean
+  }
+  weather: {
+    hasLocation: boolean
+    lastSync: number | null
+  }
+}
+
 const toast = inject<Ref<ToastHandle | undefined>>('toast')
 
 function showToast(type: keyof ToastHandle, message: string, description?: string) {
   toast?.value?.[type](message, description)
 }
 
+function getServiceLabel(service: IntegrationService): string {
+  if (service === 'spotify') return 'Spotify'
+  if (service === 'strava') return 'Strava'
+  return 'Weather'
+}
+
 const navSections = [
   { id: 'general', label: 'General', description: 'Greeting & personalization' },
   { id: 'weather', label: 'Weather', description: 'City search and units' },
+  { id: 'integrations', label: 'Integrations', description: 'Spotify · Strava · Weather' },
   { id: 'ai', label: 'AI', description: 'Suggestions & OpenAI key' },
   { id: 'demo', label: 'Demo mode', description: 'Use fake or live data' },
   { id: 'data', label: 'Data', description: 'Export and reset options' },
@@ -344,15 +604,42 @@ type SectionId = (typeof navSections)[number]['id']
 const currentSection = ref<SectionId>('general')
 const activeSection = computed(() => navSections.find(section => section.id === currentSection.value)!)
 
-const { displayName, settings, fetchSnapshot } = useDashboard()
+const { displayName, settings, fetchSnapshot, stravaData, weatherData } = useDashboard()
+
+const integrationStatus = ref<IntegrationStatusResponse>({
+  spotify: { connected: false, lastSync: null, hasClientId: false, hasClientSecret: false },
+  strava: { connected: false, lastSync: null, hasClientId: false, hasClientSecret: false },
+  weather: { hasLocation: false, lastSync: null },
+})
+
+const integrationForms = reactive<Record<CredentialService, { clientId: string; clientSecret: string }>>({
+  spotify: { clientId: '', clientSecret: '' },
+  strava: { clientId: '', clientSecret: '' },
+})
+
+const integrationSaving = reactive<Record<CredentialService, boolean>>({
+  spotify: false,
+  strava: false,
+})
+
+const integrationToggles = reactive<Record<IntegrationService, boolean>>({
+  spotify: true,
+  strava: true,
+  weather: true,
+})
+
+const testingIntegration = ref<IntegrationService | null>(null)
 
 type SettingsPatch = Partial<
-  Omit<Settings, 'ai' | 'weather' | 'brightness' | 'notifications'>
+  Omit<Settings, 'ai' | 'weather' | 'brightness' | 'notifications' | 'integrations'>
 > & {
   ai?: Partial<Settings['ai']>
   weather?: Partial<Settings['weather']>
   brightness?: Partial<Settings['brightness']>
   notifications?: Partial<Settings['notifications']>
+  integrations?: Partial<{
+    [K in keyof Settings['integrations']]: Partial<Settings['integrations'][K]>
+  }>
 }
 
 // General
@@ -385,6 +672,36 @@ async function saveDisplayName() {
   }
 }
 
+function syncIntegrationToggles() {
+  const integrations = settings.value?.integrations
+  if (!integrations) return
+  integrationToggles.spotify = integrations.spotify?.enabled ?? true
+  integrationToggles.strava = integrations.strava?.enabled ?? true
+  integrationToggles.weather = integrations.weather?.enabled ?? true
+}
+
+watch(
+  () => settings.value?.integrations,
+  () => {
+    syncIntegrationToggles()
+  },
+  { immediate: true }
+)
+
+const stravaWeeklyTarget = ref<number>(stravaData.value.weeklyTarget ?? 30)
+const stravaTargetSaving = ref(false)
+const stravaTargetError = ref<string | null>(null)
+
+watch(
+  () => stravaData.value.weeklyTarget,
+  value => {
+    if (typeof value === 'number' && !Number.isNaN(value)) {
+      stravaWeeklyTarget.value = value
+    }
+  },
+  { immediate: true }
+)
+
 // Weather
 const weatherForm = reactive({
   locationMode: 'city' as WeatherSettings['locationMode'],
@@ -400,6 +717,17 @@ const citySuggestions = ref<Array<{ name: string; latitude: number; longitude: n
 const showCitySuggestions = ref(false)
 const searchingCity = ref(false)
 let citySearchTimeout: ReturnType<typeof setTimeout> | null = null
+
+const weatherSummary = computed(() => {
+  const locationLabel =
+    weatherForm.locationMode === 'city'
+      ? weatherForm.cityName || weatherData.value.location || 'Location not set'
+      : weatherForm.latitude !== undefined && weatherForm.longitude !== undefined
+        ? `${weatherForm.latitude.toFixed(2)}, ${weatherForm.longitude.toFixed(2)}`
+        : weatherData.value.location || 'Location not set'
+  const unitsLabel = weatherForm.units === 'metric' ? '°C' : '°F'
+  return `${locationLabel} · ${unitsLabel}`
+})
 
 function setLocationMode(mode: WeatherSettings['locationMode']) {
   weatherForm.locationMode = mode
@@ -491,6 +819,124 @@ async function saveWeather() {
   } finally {
     weatherSaving.value = false
   }
+}
+
+// Integrations
+async function loadIntegrationStatus() {
+  try {
+    const payload = (await window.electronAPI.getIntegrationStatus()) as IntegrationStatusResponse
+    integrationStatus.value = payload
+  } catch (error) {
+    console.error('Failed to load integration status', error)
+  }
+}
+
+async function saveIntegrationCredentials(service: CredentialService) {
+  const form = integrationForms[service]
+  if (!form.clientId && !form.clientSecret) {
+    showToast('warning', `Add a credential before saving`)
+    return
+  }
+
+  integrationSaving[service] = true
+  try {
+    await window.electronAPI.setIntegrationCredentials({
+      service,
+      clientId: form.clientId || undefined,
+      clientSecret: form.clientSecret || undefined,
+    })
+    form.clientId = ''
+    form.clientSecret = ''
+    await loadIntegrationStatus()
+    showToast('success', `${getServiceLabel(service)} credentials saved`)
+  } catch (error) {
+    console.error('Failed to save credentials', error)
+    showToast('error', `Unable to save ${getServiceLabel(service)} credentials`)
+  } finally {
+    integrationSaving[service] = false
+  }
+}
+
+async function handleIntegrationToggle(service: IntegrationService, value: boolean) {
+  const previous = integrationToggles[service]
+  integrationToggles[service] = value
+  try {
+    await saveSettingsPartial({
+      integrations: {
+        [service]: { enabled: value },
+      },
+    })
+    showToast('success', `${getServiceLabel(service)} ${value ? 'enabled' : 'disabled'}`)
+  } catch (error) {
+    console.error('Failed to toggle integration', error)
+    integrationToggles[service] = previous
+    showToast('error', `Unable to update ${getServiceLabel(service)}`)
+  }
+}
+
+async function testIntegration(service: IntegrationService) {
+  if (testingIntegration.value) return
+  testingIntegration.value = service
+  try {
+    const result = await window.electronAPI.testIntegration(service)
+    if (result.success) {
+      showToast('success', `${getServiceLabel(service)} looks good`, result.message)
+      if (service === 'weather') {
+        await fetchSnapshot(true)
+      }
+    } else {
+      showToast('error', `${getServiceLabel(service)} test failed`, result.message)
+    }
+  } catch (error) {
+    console.error('Integration test failed', error)
+    showToast('error', `Unable to test ${getServiceLabel(service)}`)
+  } finally {
+    testingIntegration.value = null
+  }
+}
+
+async function disconnectService(service: CredentialService) {
+  try {
+    await window.electronAPI.disconnectIntegration(service)
+    await fetchSnapshot(true)
+    await loadIntegrationStatus()
+    showToast('info', `${getServiceLabel(service)} disconnected`)
+  } catch (error) {
+    console.error('Failed to disconnect integration', error)
+    showToast('error', `Unable to disconnect ${getServiceLabel(service)}`)
+  }
+}
+
+async function saveStravaTarget() {
+  if (!stravaWeeklyTarget.value || stravaWeeklyTarget.value <= 0) {
+    stravaTargetError.value = 'Enter a positive distance.'
+    return
+  }
+
+  stravaTargetError.value = null
+  stravaTargetSaving.value = true
+  try {
+    await window.electronAPI.setSetting('strava_weekly_target', Math.round(stravaWeeklyTarget.value))
+    await fetchSnapshot(true)
+    showToast('success', 'Weekly target updated')
+  } catch (error) {
+    console.error('Failed to save Strava target', error)
+    showToast('error', 'Unable to save weekly target')
+  } finally {
+    stravaTargetSaving.value = false
+  }
+}
+
+function formatRelativeTimestamp(value?: number | null): string {
+  if (!value) return '—'
+  const diff = Date.now() - value
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
 // AI
@@ -675,6 +1121,13 @@ async function saveSettingsPartial(partial: SettingsPatch) {
     throw new Error('Settings unavailable')
   }
 
+  const baseIntegrations: Settings['integrations'] =
+    base.integrations ?? {
+      spotify: { enabled: true },
+      strava: { enabled: true },
+      weather: { enabled: true },
+    }
+
   const merged: Settings = {
     ...base,
     ...partial,
@@ -684,6 +1137,18 @@ async function saveSettingsPartial(partial: SettingsPatch) {
       : base.notifications,
     weather: partial.weather ? { ...base.weather, ...partial.weather } : base.weather,
     ai: partial.ai ? { ...base.ai, ...partial.ai } : base.ai,
+    integrations: partial.integrations
+      ? (Object.keys(baseIntegrations) as Array<keyof Settings['integrations']>).reduce(
+          (acc, key) => {
+            acc[key] = {
+              ...baseIntegrations[key],
+              ...(partial.integrations?.[key] ?? {}),
+            }
+            return acc
+          },
+          {} as Settings['integrations']
+        )
+      : baseIntegrations,
   }
 
   await window.electronAPI.setSetting('settings', merged)
@@ -694,6 +1159,7 @@ onMounted(() => {
   loadWeatherSettings()
   loadOpenAIKeyStatus()
   loadAppInfo()
+  loadIntegrationStatus()
 })
 
 onUnmounted(() => {
@@ -1010,6 +1476,108 @@ onUnmounted(() => {
 
 .city-suggestions__item:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.integration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-md);
+}
+
+.integration-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(17, 25, 40, 0.65);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.integration-card--compact {
+  min-height: auto;
+}
+
+.integration-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.integration-card__eyebrow {
+  margin: 0;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.integration-card__title {
+  margin: 4px 0 2px;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.integration-card__copy {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.integration-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.integration-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.integration-card__label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.integration-card__foot {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-sm);
+}
+
+.integration-weather-summary {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  border: 1px solid transparent;
+}
+
+.status-pill--success {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #34d399;
+}
+
+.status-pill--muted {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-tertiary);
 }
 
 .ai-actions {
