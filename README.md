@@ -57,23 +57,19 @@ No fake data. No broken states. No waiting around.
 
 ### Home Dashboard
 
-![Home Dashboard](./docs/images/dashboard.png)
+![Home Dashboard](<img width="800" height="400" alt="image" src="https://github.com/user-attachments/assets/3d0ce63f-fe2a-4f87-b3f5-c5c18af15e9b" />
+)
 
 ### Activity Overview
 
-![Activity Overview](./docs/images/activity.png)
+![Activity Overview](<img width="800" height="400" alt="image" src="https://github.com/user-attachments/assets/def6d2d3-6c60-4cc7-8f76-5f0922bb725a" />
+)
 
-### Tasks
-
-![Tasks](./docs/images/tasks.png)
-
-### Daily Reading
-
-![Daily Reading](./docs/images/reading.png)
 
 ### Integrations & Settings
 
-![Settings](./docs/images/settings.png)
+![Settings](<img width="800" height="400" alt="image" src="https://github.com/user-attachments/assets/57c69d29-ace7-4f6f-b6b5-791962d152c2" />
+)
 
 > 📌 All screens share the **same layout system, spacing, and visual language**.
 > No sliding panels. No half-finished pages.
@@ -155,5 +151,6 @@ Recommended IDE setup:
 TypeScript doesn’t understand `.vue` files by default, so this project uses:
 
 * `vue-tsc` instead of `tsc`
+
 
 
