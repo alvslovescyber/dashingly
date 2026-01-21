@@ -149,6 +149,7 @@
                       class="task-inline-input"
                       type="text"
                       placeholder="New task..."
+                      @focus="showInlineKeyboard"
                       @keydown.enter="submitInlineTask"
                       @keydown.escape="cancelInlineTask"
                       @blur="handleInlineBlur"
@@ -539,6 +540,7 @@
             name="title"
             placeholder="What do you need to remember?"
             required
+            @focus="showModalKeyboard"
           />
         </label>
 
@@ -613,6 +615,13 @@
       </div>
       <p v-else class="ai-modal-empty">No suggestions right now.</p>
     </ModalSheet>
+
+    <VirtualKeyboard
+      v-model="keyboardValue"
+      :visible="keyboardVisible"
+      @enter="handleKeyboardEnter"
+      @close="hideKeyboard"
+    />
   </div>
 </template>
 
@@ -647,6 +656,7 @@ import {
   ProgressRing,
   ModalSheet,
   TogglePill,
+  VirtualKeyboard,
 } from '../components'
 import AIInboxTile from '../components/tiles/AIInboxTile.vue'
 import { useDashboard } from '../composables/useDashboard'
@@ -905,10 +915,48 @@ const isInlineAdding = ref(false)
 const inlineTaskTitle = ref('')
 const inlineTaskInput = ref<HTMLInputElement | null>(null)
 const completingTaskId = ref<string | null>(null)
+const keyboardTarget = ref<'inline' | 'modal' | null>(null)
+
+const keyboardVisible = computed(() => keyboardTarget.value !== null)
+const keyboardValue = computed({
+  get() {
+    if (keyboardTarget.value === 'inline') return inlineTaskTitle.value
+    if (keyboardTarget.value === 'modal') return newTaskTitle.value
+    return ''
+  },
+  set(value: string) {
+    if (keyboardTarget.value === 'inline') {
+      inlineTaskTitle.value = value
+    } else if (keyboardTarget.value === 'modal') {
+      newTaskTitle.value = value
+    }
+  },
+})
+
+function showInlineKeyboard() {
+  keyboardTarget.value = 'inline'
+}
+
+function showModalKeyboard() {
+  keyboardTarget.value = 'modal'
+}
+
+function hideKeyboard() {
+  keyboardTarget.value = null
+}
+
+function handleKeyboardEnter() {
+  if (keyboardTarget.value === 'inline') {
+    submitInlineTask()
+  } else if (keyboardTarget.value === 'modal') {
+    submitTask()
+  }
+}
 
 function startInlineAdd() {
   isInlineAdding.value = true
   inlineTaskTitle.value = ''
+  showInlineKeyboard()
   // Focus input on next tick
   setTimeout(() => {
     inlineTaskInput.value?.focus()
@@ -918,11 +966,17 @@ function startInlineAdd() {
 function cancelInlineTask() {
   isInlineAdding.value = false
   inlineTaskTitle.value = ''
+  if (keyboardTarget.value === 'inline') {
+    hideKeyboard()
+  }
 }
 
 function handleInlineBlur() {
   // Small delay to allow submit to fire first if Enter was pressed
   setTimeout(() => {
+    if (keyboardTarget.value === 'inline') {
+      return
+    }
     if (isInlineAdding.value && !inlineTaskTitle.value.trim()) {
       cancelInlineTask()
     }
@@ -950,6 +1004,9 @@ async function submitInlineTask() {
 watch(showAddTaskModal, open => {
   if (!open) {
     resetTaskForm()
+    if (keyboardTarget.value === 'modal') {
+      hideKeyboard()
+    }
   }
 })
 
@@ -972,6 +1029,7 @@ async function submitTask() {
   try {
     await createTask({ title: newTaskTitle.value.trim(), type: newTaskType.value })
     showAddTaskModal.value = false
+    hideKeyboard()
     await fetchSnapshot(true)
   } catch (error) {
     console.error('Failed to create task', error)

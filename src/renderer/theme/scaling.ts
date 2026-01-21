@@ -1,7 +1,7 @@
-// Scaling tuned for 4.5\" Pi display (around 800x400/480)
+// Scaling tuned for 4.5" Pi display (around 800x400/480)
 // Smaller design surface keeps text legible on the tiny panel.
-export const DESIGN_WIDTH = 1100
-export const DESIGN_HEIGHT = 650
+export const DESIGN_WIDTH = 1000
+export const DESIGN_HEIGHT = 600
 
 export const VIEWPORT_WIDTH = 800
 export const VIEWPORT_HEIGHT = 480
