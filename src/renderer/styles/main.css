@@ -81,6 +81,15 @@
   --color-purple: #8b5cf6;
   --color-white: #ffffff;
 
+  /* Type scale tuned for small Pi display */
+  --text-xs: 13px;
+  --text-sm: 15px;
+  --text-base: 17px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 30px;
+  --text-3xl: 36px;
+
   /* Text - STRONGER HIERARCHY (bumped for better legibility) */
   --text-primary: rgba(255, 255, 255, 0.96);
   --text-secondary: rgba(255, 255, 255, 0.72);

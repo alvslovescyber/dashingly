@@ -1,8 +1,7 @@
-// Scaling System for Fixed Resolution Display
-// Design at 1440x900, display at 800x480
-
-export const DESIGN_WIDTH = 1440
-export const DESIGN_HEIGHT = 900
+// Scaling tuned for 4.5\" Pi display (around 800x400/480)
+// Smaller design surface keeps text legible on the tiny panel.
+export const DESIGN_WIDTH = 1100
+export const DESIGN_HEIGHT = 650
 
 export const VIEWPORT_WIDTH = 800
 export const VIEWPORT_HEIGHT = 480
@@ -56,9 +55,6 @@ export function isKioskMode(): boolean {
 
 // Get appropriate scale for current window size
 export function getDynamicScale(): number {
-  if (isKioskMode()) {
-    return SCALE
-  }
-  // In dev mode, scale based on window size
-  return Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT)
+  const scale = Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT)
+  return Math.min(scale, 1)
 }
