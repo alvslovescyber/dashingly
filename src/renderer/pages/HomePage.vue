@@ -8,64 +8,24 @@
       <!-- Top Bar -->
       <TopBar
         :display-name="displayName"
-        :focus-mode="focusMode"
-        @toggle-focus="toggleFocusMode"
-        @open-settings="showSettings = true"
+        @open-settings="openSettingsPanel"
       >
         <!-- Page Indicator Dots -->
         <template #center>
           <div class="page-dots">
             <button
-              v-for="(section, index) in sections"
+              v-for="section in pagerSections"
               :key="section.id"
               class="page-dot"
-              :class="{ 'page-dot--active': currentSectionIndex === index }"
-              @click="goToSection(index)"
+              :class="{ 'page-dot--active': currentSection === section.id }"
+              @click="goToSectionById(section.id)"
             />
           </div>
         </template>
       </TopBar>
 
-      <!-- Focus Mode -->
-      <div v-if="focusMode" class="focus-mode">
-        <p class="focus-mode__label">Focus mode</p>
-        <p class="focus-mode__time">{{ focusClock }}</p>
-        <p class="focus-mode__date">{{ focusDate }}</p>
-        <div class="focus-mode__grid">
-          <TileCard title="Today's Tasks" :interactive="false">
-            <div v-if="pendingToday.length" class="focus-mode__list">
-              <div v-for="task in pendingToday" :key="task.id" class="focus-mode__list-item">
-                <button class="task-checkbox" @click="toggleTask(task.id)">
-                  <Check v-if="task.completed" :size="12" />
-                </button>
-                <span>{{ task.title }}</span>
-              </div>
-            </div>
-            <p v-else class="focus-mode__empty">All tasks complete</p>
-          </TileCard>
-          <TileCard title="Weekly Running" :interactive="false">
-            <p class="focus-mode__stat">{{ stravaData.weeklyDistance }} km</p>
-            <p class="focus-mode__hint">/{{ stravaData.weeklyTarget }} km target</p>
-            <MiniChart
-              :data="stravaData.weekData"
-              :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
-              color="#14B8A6"
-              gradient-start="rgba(20, 184, 166, 0.12)"
-              gradient-end="rgba(20, 184, 166, 0)"
-              :show-points="true"
-            />
-          </TileCard>
-          <TileCard title="Weather" :interactive="false">
-            <p class="focus-mode__stat">{{ formatTemperature(weatherData.temperature) }}</p>
-            <p class="focus-mode__hint">{{ weatherData.condition }}</p>
-            <p class="focus-mode__hint">Updated {{ weatherUpdatedLabel }}</p>
-          </TileCard>
-        </div>
-      </div>
-
       <!-- Swipeable Content Area -->
       <div
-        v-else
         ref="swipeContainer"
         class="home-page__content"
         @touchstart="handleTouchStart"
@@ -83,8 +43,6 @@
             <div class="home-page__row home-page__row--top">
               <!-- Spotify Now Playing -->
               <SpotifyBar
-                v-if="spotifyData.connected"
-                :is-visible="shouldShowSpotify"
                 :is-playing="spotifyData.isPlaying"
                 :track="spotifyData.track"
                 :artist="spotifyData.artist"
@@ -94,14 +52,8 @@
                 :duration-ms="spotifyData.durationMs"
                 :connected="spotifyData.connected"
                 class="tile--spotify"
-              />
-              <DaySummaryTile
-                v-else
-                class="tile--spotify"
-                :tasks-completed="tasksCompleted"
-                :total-tasks="totalTasks"
-                :weekly-distance="weeklyDistanceDisplay"
-                :weather-summary="daySummaryWeather"
+                @retry="handleSpotifyRetry"
+                @manage="openSettingsPanel"
               />
 
               <!-- AI Inbox Tile -->
@@ -109,9 +61,11 @@
                 :suggestions="aiSuggestions"
                 next-suggestion-time="12:00"
                 class="tile--ai-inbox"
+                :generating="aiGenerating"
                 @accept="handleAIAccept"
                 @dismiss="handleAIDismiss"
                 @view-all="showAISuggestionsModal = true"
+                @generate="handleAIGenerate"
               />
             </div>
 
@@ -130,15 +84,18 @@
                   <div class="strava-target">
                     <span>Target: {{ stravaData.weeklyTarget }}km</span>
                   </div>
-                  <MiniChart
-                    :data="stravaData.weekData"
-                    :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
-                    color="#14B8A6"
-                    gradient-start="rgba(20, 184, 166, 0.12)"
-                    gradient-end="rgba(20, 184, 166, 0)"
-                    :height="80"
-                    :show-points="true"
-                  />
+                  <div class="strava-chart">
+                    <MiniChart
+                      :data="stravaData.weekData"
+                      :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+                      color="#14B8A6"
+                      gradient-start="rgba(20, 184, 166, 0.12)"
+                      gradient-end="rgba(20, 184, 166, 0)"
+                      :height="120"
+                      :show-points="true"
+                      :min-value="0"
+                    />
+                  </div>
                 </div>
               </TileCard>
 
@@ -148,27 +105,51 @@
                   <span class="task-count">{{ tasksCompleted }}/{{ totalTasks }}</span>
                 </template>
                 <div class="tasks-content">
-                  <div
-                    v-for="task in displayedTasks"
-                    :key="task.id"
-                    class="task-item"
-                    :class="{ 'task-item--completed': task.completed }"
-                    @click="toggleTask(task.id)"
-                  >
-                    <div class="task-checkbox">
-                      <Check v-if="task.completed" :size="12" />
-                    </div>
-                    <span class="task-title">{{ task.title }}</span>
-                    <button
-                      v-if="task.completed"
-                      class="task-delete"
-                      type="button"
-                      @click.stop="handleTaskDelete(task.id)"
+                  <TransitionGroup name="task-list" tag="div" class="tasks-list-container">
+                    <div
+                      v-for="task in displayedTasks"
+                      :key="task.id"
+                      class="task-item"
+                      :class="{
+                        'task-item--completed': task.completed,
+                        'task-item--completing': completingTaskId === task.id
+                      }"
+                      @click="toggleTask(task.id)"
                     >
-                      <Trash2 :size="14" />
-                    </button>
+                      <div class="task-checkbox">
+                        <Check v-if="task.completed || completingTaskId === task.id" :size="12" />
+                      </div>
+                      <span class="task-title">{{ task.title }}</span>
+                      <button
+                        v-if="task.completed"
+                        class="task-delete"
+                        type="button"
+                        @click.stop="handleTaskDelete(task.id)"
+                      >
+                        <Trash2 :size="14" />
+                      </button>
+                    </div>
+                  </TransitionGroup>
+
+                  <!-- Inline Task Creation -->
+                  <div v-if="isInlineAdding" class="task-inline-add">
+                    <input
+                      ref="inlineTaskInput"
+                      v-model="inlineTaskTitle"
+                      class="task-inline-input"
+                      type="text"
+                      placeholder="New task..."
+                      @keydown.enter="submitInlineTask"
+                      @keydown.escape="cancelInlineTask"
+                      @blur="handleInlineBlur"
+                    />
                   </div>
-                  <button class="task-add" type="button" @click.stop="showAddTaskModal = true">
+                  <button
+                    v-else
+                    class="task-add"
+                    type="button"
+                    @click.stop="startInlineAdd"
+                  >
                     <Plus :size="14" />
                     <span>Add task</span>
                   </button>
@@ -187,21 +168,21 @@
               <TileCard title="Health" :icon="Heart" class="tile--health" size="md">
                 <div class="health-content">
                   <div class="health-stat">
-                    <ProgressRing :value="healthData.stepsPercent" :size="60">
+                    <ProgressRing :value="healthData.stepsPercent" :size="64" color="#22c55e">
                       <Footprints :size="20" />
                     </ProgressRing>
                     <div class="health-stat-info">
                       <span class="health-stat-value">{{ healthData.steps.toLocaleString() }}</span>
-                      <span class="health-stat-label">steps</span>
+                      <span class="health-stat-label">Steps</span>
                     </div>
                   </div>
                   <div class="health-stat">
-                    <ProgressRing :value="healthData.caloriesPercent" :size="60" color="#F97316">
+                    <ProgressRing :value="healthData.caloriesPercent" :size="64" color="#F97316">
                       <Flame :size="20" />
                     </ProgressRing>
                     <div class="health-stat-info">
                       <span class="health-stat-value">{{ healthData.calories }}</span>
-                      <span class="health-stat-label">cal</span>
+                      <span class="health-stat-label">Calories</span>
                     </div>
                   </div>
                 </div>
@@ -215,22 +196,23 @@
                 size="md"
               >
                 <div class="bible-content">
-                  <p class="bible-reference">{{ currentReference }}</p>
-                  <p class="bible-verse">
-                    <span class="bible-verse__main">"{{ verseMain }}"</span>
-                    <span v-if="verseRest" class="bible-verse__rest">
-                      {{ verseRest }}
-                    </span>
-                  </p>
-                  <div class="bible-actions">
-                    <button
-                      class="bible-button"
-                      :class="{ 'bible-button--done': isBibleCompleted }"
-                      @click="handleBibleAction"
-                    >
-                      {{ isBibleCompleted ? 'Done' : 'Mark Done' }}
-                    </button>
+                  <div class="bible-header">
+                    <span class="bible-reference">{{ currentReference }}</span>
                   </div>
+                  <div class="bible-verse-container">
+                    <div class="bible-verse-border" />
+                    <p class="bible-verse">
+                      "{{ verseMain }}<span v-if="verseRest" class="bible-verse__rest">{{ verseRest }}</span>"
+                    </p>
+                  </div>
+                  <button
+                    class="bible-button"
+                    :class="{ 'bible-button--done': isBibleCompleted }"
+                    @click="handleBibleAction"
+                  >
+                    <Check v-if="isBibleCompleted" :size="14" />
+                    <span>{{ isBibleCompleted ? 'Completed' : 'Mark as Done' }}</span>
+                  </button>
                 </div>
               </TileCard>
             </div>
@@ -257,7 +239,13 @@
                     </button>
                   </div>
                 </template>
-                <MiniChart :data="energyChart.data" :labels="energyChart.labels" :height="100" />
+                <MiniChart
+                  :data="energyChart.data"
+                  :labels="energyChart.labels"
+                  :height="120"
+                  :smart-scale="false"
+                  :min-value="0"
+                />
               </TileCard>
 
               <!-- Weather Tile -->
@@ -266,35 +254,50 @@
                   <button
                     class="weather-settings-btn"
                     type="button"
-                    @click.stop="showSettings = true"
+                    @click.stop="openSettingsPanel"
                   >
                     <SettingsIcon :size="16" />
                   </button>
                 </template>
+
+                <!-- Weather States -->
                 <div class="weather-content">
-                  <div class="weather-today">
-                    <component :is="weatherIcon" :size="48" class="weather-icon" />
-                    <div class="weather-temps">
-                      <span class="weather-current">
-                        {{ formatTemperature(weatherData.temperature) }}
-                      </span>
-                      <div class="weather-range">
-                        <span>{{ formatTemperature(weatherData.high) }}</span>
-                        <span class="weather-divider">/</span>
-                        <span>{{ formatTemperature(weatherData.low) }}</span>
+                  <!-- Loading State -->
+                  <div v-if="!weatherData.temperature && !weatherData.condition" class="weather-loading">
+                    <Cloud :size="40" class="weather-loading__icon" />
+                    <span class="weather-loading__text">Loading weather...</span>
+                  </div>
+
+                  <!-- Data Available -->
+                  <template v-else>
+                    <div class="weather-today">
+                      <component :is="weatherIcon" :size="44" class="weather-icon" />
+                      <div class="weather-temps">
+                        <span class="weather-current">
+                          {{ formatTemperature(weatherData.temperature) }}
+                        </span>
+                        <div class="weather-range">
+                          <span>{{ formatTemperature(weatherData.high) }}</span>
+                          <span class="weather-divider">/</span>
+                          <span>{{ formatTemperature(weatherData.low) }}</span>
+                        </div>
+                      </div>
+                      <div class="weather-meta">
+                        <span class="weather-condition">{{ weatherData.condition }}</span>
                       </div>
                     </div>
-                    <span class="weather-label">{{ weatherData.condition }}</span>
-                    <span class="weather-location">{{ weatherData.location }}</span>
-                  </div>
-                  <div class="weather-week">
-                    <div v-for="day in formattedForecast" :key="day.day" class="weather-day">
-                      <span class="weather-day-name">{{ day.day }}</span>
-                      <span class="weather-day-date">{{ formatTemperature(day.high) }}</span>
-                      <span class="weather-day-low">{{ formatTemperature(day.low) }}</span>
+                    <div class="weather-week">
+                      <div v-for="day in formattedForecast" :key="day.day" class="weather-day">
+                        <span class="weather-day-name">{{ day.day }}</span>
+                        <span class="weather-day-high">{{ formatTemperature(day.high) }}</span>
+                        <span class="weather-day-low">{{ formatTemperature(day.low) }}</span>
+                      </div>
                     </div>
-                  </div>
-                  <span class="weather-updated">Updated {{ weatherUpdatedLabel }}</span>
+                    <div class="weather-footer">
+                      <span class="weather-location">{{ weatherData.location }}</span>
+                      <span class="weather-updated">{{ weatherUpdatedLabel }}</span>
+                    </div>
+                  </template>
                 </div>
               </TileCard>
             </div>
@@ -303,41 +306,42 @@
           <!-- Section: Health -->
           <div class="home-page__section home-page__section--health">
             <div class="health-page">
-              <div class="health-hero-card">
-                <div class="health-hero-card__ring">
-                  <ProgressRing :value="healthData.stepsPercent" :size="120">
-                    <Footprints :size="32" />
-                  </ProgressRing>
-                  <div class="health-hero-card__stat">
-                    <span class="health-hero-card__value">
-                      {{ healthData.steps.toLocaleString() }}
-                    </span>
-                    <span class="health-hero-card__label">steps today</span>
+              <TileCard title="Activity overview" :icon="Heart" size="lg" :interactive="false">
+                <div class="health-hero-card">
+                  <div class="health-hero-card__ring">
+                    <ProgressRing :value="healthData.stepsPercent" :size="120">
+                      <Footprints :size="32" />
+                    </ProgressRing>
+                    <div class="health-hero-card__stat">
+                      <span class="health-hero-card__value">
+                        {{ healthData.steps.toLocaleString() }}
+                      </span>
+                      <span class="health-hero-card__label">steps today</span>
+                    </div>
+                  </div>
+                  <div class="health-hero-card__meta">
+                    <div>
+                      <span class="health-meta__label">Active calories</span>
+                      <p class="health-meta__value">{{ healthData.calories }}</p>
+                    </div>
+                    <div>
+                      <span class="health-meta__label">Sleep minutes</span>
+                      <p class="health-meta__value">{{ healthData.sleepMinutes }}</p>
+                    </div>
+                  </div>
+                  <div
+                    class="health-sync"
+                    :class="{ 'health-sync--warning': healthData.warningDays }"
+                  >
+                    <span>Last synced {{ healthSyncLabel }}</span>
+                    <span v-if="healthData.warningDays">Reconnect Health source</span>
                   </div>
                 </div>
-                <div class="health-hero-card__meta">
-                  <div>
-                    <span class="health-meta__label">Active calories</span>
-                    <p class="health-meta__value">{{ healthData.calories }}</p>
-                  </div>
-                  <div>
-                    <span class="health-meta__label">Sleep minutes</span>
-                    <p class="health-meta__value">{{ healthData.sleepMinutes }}</p>
-                  </div>
-                </div>
-                <div
-                  class="health-sync"
-                  :class="{ 'health-sync--warning': healthData.warningDays }"
-                >
-                  <span>Last synced {{ healthSyncLabel }}</span>
-                  <span v-if="healthData.warningDays">Reconnect Health source</span>
-                </div>
-              </div>
+              </TileCard>
 
               <div class="health-trends">
-                <div class="health-trend-card">
+                <TileCard title="Steps · 7 days" class="health-trend-card" :interactive="false">
                   <div class="health-trend-card__header">
-                    <span>Steps · 7 days</span>
                     <span class="health-trend-card__value">{{ latestHealthSteps }}</span>
                   </div>
                   <MiniChart
@@ -346,10 +350,9 @@
                     color="#34d399"
                     gradient-start="rgba(52, 211, 153, 0.18)"
                   />
-                </div>
-                <div class="health-trend-card">
+                </TileCard>
+                <TileCard title="Sleep minutes" class="health-trend-card" :interactive="false">
                   <div class="health-trend-card__header">
-                    <span>Sleep minutes</span>
                     <span class="health-trend-card__value">{{ latestSleepMinutes }}</span>
                   </div>
                   <MiniChart
@@ -358,7 +361,7 @@
                     color="#60a5fa"
                     gradient-start="rgba(96, 165, 250, 0.2)"
                   />
-                </div>
+                </TileCard>
               </div>
             </div>
           </div>
@@ -366,16 +369,15 @@
           <!-- Section: Tasks -->
           <div class="home-page__section home-page__section--tasks">
             <div class="tasks-page">
-              <div class="tasks-page__column">
-                <div class="tasks-page__header">
-                  <h3>Today</h3>
-                  <span>{{ tasksCompleted }}/{{ totalTasks }}</span>
-                </div>
+              <TileCard title="Today" :icon="ListChecks" :interactive="false">
+                <template #headerRight>
+                  <span class="tasks-count-pill">{{ tasksCompleted }}/{{ totalTasks }}</span>
+                </template>
                 <div v-if="pendingToday.length" class="tasks-page__list">
                   <button
                     v-for="task in pendingToday"
                     :key="task.id"
-                    class="tasks-page__item"
+                    class="tasks-page__item tasks-page__item--action"
                     @click="toggleTask(task.id)"
                   >
                     <span>{{ task.title }}</span>
@@ -383,29 +385,31 @@
                   </button>
                 </div>
                 <p v-else class="tasks-page__empty">You're all set for today 🎉</p>
-              </div>
+              </TileCard>
 
-              <div class="tasks-page__column">
-                <div class="tasks-page__header">
-                  <h3>One-off</h3>
+              <TileCard title="Upcoming" :interactive="false">
+                <template #headerRight>
                   <button class="tasks-page__add" @click="showAddTaskModal = true">
                     <Plus :size="14" /> New
                   </button>
-                </div>
+                </template>
                 <div v-if="oneOffTasks.length" class="tasks-page__list">
-                  <div v-for="task in oneOffTasks" :key="task.id" class="tasks-page__item tasks-page__item--static">
+                  <div
+                    v-for="task in oneOffTasks"
+                    :key="task.id"
+                    class="tasks-page__item tasks-page__item--static"
+                  >
                     <span>{{ task.title }}</span>
                   </div>
                 </div>
                 <p v-else class="tasks-page__empty">No upcoming tasks</p>
-              </div>
+              </TileCard>
 
-              <div class="tasks-page__column">
-                <div class="tasks-page__header">
-                  <h3>Completed</h3>
-                  <span>{{ completedToday.length }}</span>
-                </div>
-                <div v-if="completedToday.length" class="tasks-page__list">
+              <TileCard title="Completed" :interactive="false">
+                <template #headerRight>
+                  <span class="tasks-count-pill">{{ completedToday.length }}</span>
+                </template>
+                <div v-if="completedToday.length" class="tasks-page__list tasks-page__list--compact">
                   <div
                     v-for="task in completedToday"
                     :key="task.id"
@@ -419,46 +423,100 @@
                   </div>
                 </div>
                 <p v-else class="tasks-page__empty">Nothing completed yet</p>
-              </div>
+              </TileCard>
             </div>
           </div>
 
           <!-- Section: Reading -->
           <div class="home-page__section home-page__section--reading">
             <div class="reading-page">
-              <TileCard title="Daily Reading" :icon="BookOpen" :interactive="false">
+              <TileCard title="Daily reading" :icon="BookOpen" :interactive="false">
                 <p class="reading-page__reference">{{ currentReference }}</p>
                 <p class="reading-page__text">
                   “{{ verseMain }}
                   <span v-if="verseRest">{{ verseRest }}</span>
                   ”
                 </p>
+                <div class="reading-page__progress">
+                  <p class="reading-page__label">Plan progress</p>
+                  <div class="reading-page__progress-bar">
+                    <div
+                      class="reading-page__progress-fill"
+                      :style="{ width: `${(bibleData.dayIndex % 365) / 3.65}%` }"
+                    />
+                  </div>
+                </div>
                 <div class="reading-page__actions">
-                  <button class="bible-button" :class="{ 'bible-button--done': isBibleCompleted }" @click="handleBibleAction">
+                  <button
+                    class="bible-button"
+                    :class="{ 'bible-button--done': isBibleCompleted }"
+                    @click="handleBibleAction"
+                  >
                     {{ isBibleCompleted ? 'Completed today' : 'Mark Done' }}
                   </button>
                 </div>
               </TileCard>
-              <div class="reading-page__progress">
-                <p class="reading-page__label">Plan progress</p>
-                <div class="reading-page__progress-bar">
-                  <div class="reading-page__progress-fill" :style="{ width: `${(bibleData.dayIndex % 365) / 3.65}%` }" />
+              <TileCard title="Recent readings" :interactive="false">
+                <div class="reading-history" v-if="verseHistory.length">
+                  <div
+                    v-for="entry in verseHistory"
+                    :key="entry.reference"
+                    class="reading-history__item"
+                  >
+                    <span class="reading-history__ref">{{ entry.reference }}</span>
+                    <span class="reading-history__date">{{ entry.date }}</span>
+                  </div>
                 </div>
-              </div>
+                <p v-else class="reading-page__empty">History unavailable.</p>
+              </TileCard>
             </div>
           </div>
 
           <!-- Section: Music -->
           <div class="home-page__section home-page__section--music">
             <div class="music-page">
-              <TileCard title="Spotify" :icon="Music" :interactive="false">
-                <p class="music-page__title">Developer access pending</p>
-                <p class="music-page__copy">
-                  Focus on tasks, health, and reading while Spotify integration is offline. Add your own
-                  tracks once Spotify Developer credentials are restored.
-                </p>
+              <TileCard title="Now playing" :icon="Music" :interactive="false">
+                <div v-if="spotifyData.connected && spotifyData.track" class="music-now-playing">
+                  <div class="music-now-playing__headline">{{ spotifyData.track }}</div>
+                  <span class="music-now-playing__artist">{{ spotifyData.artist }}</span>
+                  <div class="music-now-playing__progress">
+                    <span>{{ formatDuration(spotifyData.progressMs) }}</span>
+                    <div class="music-now-playing__bar">
+                      <div
+                        class="music-now-playing__bar-fill"
+                        :style="{ width: `${(spotifyData.progressMs / spotifyData.durationMs) * 100}%` }"
+                      />
+                    </div>
+                    <span>{{ formatDuration(spotifyData.durationMs) }}</span>
+                  </div>
+                </div>
+                <div v-else class="music-empty">
+                  <p class="music-page__title">Waiting for Spotify</p>
+                  <p class="music-page__copy">
+                    Start playback on your phone or desktop and it will appear here.
+                  </p>
+                  <button class="music-connect" @click="handleSpotifyRetry">Refresh</button>
+                </div>
+              </TileCard>
+              <TileCard title="Connection" :interactive="false">
+                <div class="music-status">
+                  <div>
+                    <p class="music-status__label">Status</p>
+                    <p class="music-status__value">
+                      {{ spotifyData.connected ? 'Connected' : 'Not connected' }}
+                    </p>
+                  </div>
+                  <button class="music-connect" @click="openSettingsPanel">
+                    {{ spotifyData.connected ? 'Manage' : 'Connect Spotify' }}
+                  </button>
+                </div>
               </TileCard>
             </div>
+          </div>
+
+          <!-- Section: Settings -->
+          <div class="home-page__section home-page__section--settings">
+            <SettingsPage />
           </div>
         </div>
       </div>
@@ -551,115 +609,11 @@
       <p v-else class="ai-modal-empty">No suggestions right now.</p>
     </ModalSheet>
 
-    <!-- Settings Modal -->
-    <ModalSheet v-model="showSettings" title="Settings" size="sm">
-      <div class="settings-section">
-        <label class="form-label">
-          Display Name
-          <input
-            v-model="settingsForm.displayName"
-            class="form-input"
-            type="text"
-            placeholder="Your Name"
-          />
-        </label>
-
-        <span class="form-label">Weather Location Mode</span>
-        <div class="settings-radio-group">
-          <label>
-            <input
-              v-model="settingsForm.locationMode"
-              type="radio"
-              value="city"
-              name="locationMode"
-            />
-            City
-          </label>
-          <label>
-            <input
-              v-model="settingsForm.locationMode"
-              type="radio"
-              value="latlon"
-              name="locationMode"
-            />
-            Latitude/Longitude
-          </label>
-        </div>
-
-        <label v-if="settingsForm.locationMode === 'city'" class="form-label city-search-container">
-          City
-          <div class="input-wrapper">
-            <input
-              v-model="settingsForm.cityName"
-              class="form-input"
-              type="text"
-              placeholder="Chicago"
-              @input="handleCityInput"
-            />
-            <div v-if="showCitySuggestions" class="city-suggestions">
-              <button
-                v-for="(city, index) in citySuggestions"
-                :key="index"
-                class="city-suggestion-item"
-                @click="selectCity(city)"
-              >
-                {{ city.name }}
-              </button>
-            </div>
-            <div v-if="searchingCity" class="input-spinner"></div>
-          </div>
-        </label>
-
-        <div v-else class="coordinates-grid">
-          <label class="form-label">
-            Latitude
-            <input
-              v-model.number="settingsForm.latitude"
-              class="form-input"
-              type="number"
-              step="0.01"
-              placeholder="41.88"
-            />
-          </label>
-          <label class="form-label">
-            Longitude
-            <input
-              v-model.number="settingsForm.longitude"
-              class="form-input"
-              type="number"
-              step="0.01"
-              placeholder="-87.62"
-            />
-          </label>
-        </div>
-
-        <label class="form-label">
-          Units
-          <div class="settings-radio-group settings-radio-group--compact">
-            <label>
-              <input v-model="settingsForm.units" type="radio" value="metric" name="units" />
-              Celsius
-            </label>
-            <label>
-              <input v-model="settingsForm.units" type="radio" value="imperial" name="units" />
-              Fahrenheit
-            </label>
-          </div>
-        </label>
-
-        <p v-if="loadingSettings" class="settings-note">Loading current settings...</p>
-        <p v-if="settingsError" class="form-error">{{ settingsError }}</p>
-
-        <button class="form-submit" type="button" :disabled="savingSettings" @click="saveSettings">
-          {{ savingSettings ? 'Saving...' : 'Save Settings' }}
-        </button>
-      </div>
-    </ModalSheet>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, inject, type Ref } from 'vue'
 import {
   Activity,
   ListChecks,
@@ -693,8 +647,14 @@ import {
 import AIInboxTile from '../components/tiles/AIInboxTile.vue'
 import { useDashboard } from '../composables/useDashboard'
 import { useVerseOfDay } from '../composables/useVerseOfDay'
-import type { WeatherSettings } from '@shared/types'
-import DaySummaryTile from '../components/DaySummaryTile.vue'
+import SettingsPage from './SettingsPage.vue'
+
+type ToastHandle = {
+  success: (message: string, description?: string) => void
+  error: (message: string, description?: string) => void
+  info: (message: string, description?: string) => void
+  warning: (message: string, description?: string) => void
+}
 
 
 // Dashboard data from main process
@@ -720,32 +680,45 @@ const {
   fetchSnapshot,
 } = useDashboard()
 
+const toast = inject<Ref<ToastHandle | undefined>>('toast')
+
+function notify(type: keyof ToastHandle, message: string, description?: string) {
+  toast?.value?.[type](message, description)
+}
+
 // Navigation - Sections for swipe navigation
 const sections = [
-  { id: 'home', label: 'Home' },
-  { id: 'health', label: 'Health' },
-  { id: 'tasks', label: 'Tasks' },
-  { id: 'reading', label: 'Reading' },
-  { id: 'music', label: 'Music' },
-]
+  { id: 'home', label: 'Home', showInPager: true },
+  { id: 'health', label: 'Health', showInPager: true },
+  { id: 'tasks', label: 'Tasks', showInPager: true },
+  { id: 'reading', label: 'Reading', showInPager: true },
+  { id: 'music', label: 'Music', showInPager: true },
+  { id: 'settings', label: 'Settings', showInPager: false },
+] as const
+
+const pagerSections = sections.filter(section => section.showInPager !== false)
 
 const currentSectionIndex = ref(0)
 const currentSection = computed(() => sections[currentSectionIndex.value]?.id ?? 'home')
-const showSettings = ref(false)
 const showAddTaskModal = ref(false)
 const showAllTasksModal = ref(false)
 const showAISuggestionsModal = ref(false)
+const aiGenerating = ref(false)
 const stravaEnabled = ref(true)
 
 function handleNavigate(route: string) {
-  const index = sections.findIndex(s => s.id === route)
+  goToSectionById(route)
+}
+
+function goToSectionById(id: string) {
+  const index = sections.findIndex(section => section.id === id)
   if (index !== -1) {
     currentSectionIndex.value = index
   }
 }
 
-function goToSection(index: number) {
-  currentSectionIndex.value = index
+function openSettingsPanel() {
+  goToSectionById('settings')
 }
 
 // Swipe handling
@@ -794,13 +767,34 @@ function handleAIDismiss(id: string) {
   dismissSuggestion(id)
 }
 
-function toggleFocusMode() {
-  focusMode.value = !focusMode.value
+async function handleAIGenerate() {
+  if (aiGenerating.value) return
+  aiGenerating.value = true
+  try {
+    const result = await window.electronAPI.triggerAISuggestions()
+    if (!result.success) {
+      notify('error', 'Unable to generate suggestions', result.reason)
+      return
+    }
+    await fetchSnapshot(true)
+    notify('success', 'AI suggestions refreshed')
+  } catch (error) {
+    console.error('AI generation failed', error)
+    notify('error', 'Unable to generate suggestions')
+  } finally {
+    aiGenerating.value = false
+  }
 }
 
-const shouldShowSpotify = computed(
-  () => spotifyData.value.connected || Boolean(spotifyData.value.track)
-)
+async function handleSpotifyRetry() {
+  try {
+    await fetchSnapshot(true)
+    notify('info', 'Spotify refreshed')
+  } catch (error) {
+    console.error('Spotify refresh failed', error)
+    notify('error', 'Unable to refresh Spotify')
+  }
+}
 
 const pendingToday = computed(() => todayTasks.value.filter(task => !task.completed))
 const completedToday = computed(() => todayTasks.value.filter(task => task.completed))
@@ -808,22 +802,24 @@ const oneOffTasks = computed(() =>
   tasks.value.filter(task => task.type === 'oneoff' && task.isActive)
 )
 
-const daySummaryWeather = computed(() => {
-  if (weatherData.value.temperature !== null && weatherData.value.condition) {
-    return `${formatTemperature(weatherData.value.temperature)} • ${weatherData.value.condition}`
-  }
-  return weatherData.value.condition ?? '—'
-})
-
-const weeklyDistanceDisplay = computed(() =>
-  stravaData.value.weeklyDistance ? Number(stravaData.value.weeklyDistance).toFixed(1) : '0'
-)
 
 
-
-// Task toggle handler
+// Task toggle handler with animation
 function toggleTask(id: string) {
-  completeTask(id)
+  const task = todayTasks.value.find(t => t.id === id)
+  if (!task) return
+
+  // If completing (not un-completing), show animation
+  if (!task.completed) {
+    completingTaskId.value = id
+    setTimeout(() => {
+      completeTask(id)
+      completingTaskId.value = null
+    }, 200)
+  } else {
+    // Un-completing, no animation needed
+    completeTask(id)
+  }
 }
 
 async function handleTaskDelete(id: string) {
@@ -841,6 +837,53 @@ const newTaskTitle = ref('')
 const newTaskType = ref<'daily' | 'oneoff'>('daily')
 const taskSaving = ref(false)
 const taskError = ref<string | null>(null)
+
+// Inline task creation state
+const isInlineAdding = ref(false)
+const inlineTaskTitle = ref('')
+const inlineTaskInput = ref<HTMLInputElement | null>(null)
+const completingTaskId = ref<string | null>(null)
+
+function startInlineAdd() {
+  isInlineAdding.value = true
+  inlineTaskTitle.value = ''
+  // Focus input on next tick
+  setTimeout(() => {
+    inlineTaskInput.value?.focus()
+  }, 10)
+}
+
+function cancelInlineTask() {
+  isInlineAdding.value = false
+  inlineTaskTitle.value = ''
+}
+
+function handleInlineBlur() {
+  // Small delay to allow submit to fire first if Enter was pressed
+  setTimeout(() => {
+    if (isInlineAdding.value && !inlineTaskTitle.value.trim()) {
+      cancelInlineTask()
+    }
+  }, 150)
+}
+
+async function submitInlineTask() {
+  const title = inlineTaskTitle.value.trim()
+  if (!title) {
+    cancelInlineTask()
+    return
+  }
+
+  try {
+    await createTask({ title, type: 'daily' })
+    inlineTaskTitle.value = ''
+    await fetchSnapshot(true)
+    // Keep input focused for rapid entry
+    inlineTaskInput.value?.focus()
+  } catch (error) {
+    console.error('Failed to create task', error)
+  }
+}
 
 watch(showAddTaskModal, open => {
   if (!open) {
@@ -877,39 +920,10 @@ async function submitTask() {
 }
 
 const pendingAISuggestions = computed(() => aiSuggestions.value)
-const focusMode = ref(false)
-const focusNow = ref(new Date())
-let focusTimer: ReturnType<typeof setInterval> | null = null
-
-onMounted(() => {
-  focusTimer = setInterval(() => {
-    focusNow.value = new Date()
-  }, 60 * 1000)
-})
-
-onUnmounted(() => {
-  if (focusTimer) {
-    clearInterval(focusTimer)
-  }
-})
-
-const focusClock = computed(() =>
-  new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(focusNow.value)
-)
-
-const focusDate = computed(() =>
-  new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }).format(focusNow.value)
-)
 
 // Daily Reading - Verse of the Day (from local JSON for now, syncced with DB status)
 const verseData = useVerseOfDay()
+const verseHistory = verseData.history
 
 // Computed verse parts for better text hierarchy
 const verseMain = computed(() => {
@@ -983,6 +997,14 @@ function formatTemperature(value: number | null | undefined): string {
   return `${Math.round(value)}°`
 }
 
+function formatDuration(ms: number | null | undefined): string {
+  if (!ms) return '0:00'
+  const totalSeconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 function formatRelativeTime(timestamp?: number | null): string {
   if (!timestamp) return '—'
   const diff = Date.now() - timestamp
@@ -999,133 +1021,6 @@ function formatRelativeTime(timestamp?: number | null): string {
 const weatherUpdatedLabel = computed(() => formatRelativeTime(weatherData.value.lastUpdated))
 
 // Settings form (Weather + General)
-const settingsForm = ref({
-  displayName: '',
-  locationMode: 'city',
-  cityName: 'New York',
-  latitude: undefined as number | undefined,
-  longitude: undefined as number | undefined,
-  units: 'metric',
-})
-const loadingSettings = ref(false)
-const savingSettings = ref(false)
-const settingsError = ref<string | null>(null)
-const citySuggestions = ref<Array<{ name: string; latitude: number; longitude: number }>>([])
-const searchingCity = ref(false)
-const showCitySuggestions = ref(false)
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-
-function handleCityInput(e: Event) {
-  const query = (e.target as HTMLInputElement).value
-
-  if (searchTimeout) clearTimeout(searchTimeout)
-
-  if (!query || query.length < 2) {
-    citySuggestions.value = []
-    showCitySuggestions.value = false
-    return
-  }
-
-  searchingCity.value = true
-  // Debounce search
-  searchTimeout = setTimeout(async () => {
-    try {
-      const results = await window.electronAPI.searchCities(query)
-      citySuggestions.value = results
-      showCitySuggestions.value = results.length > 0
-    } catch (err) {
-      console.error('Search failed', err)
-    } finally {
-      searchingCity.value = false
-    }
-  }, 500)
-}
-
-function selectCity(city: { name: string; latitude: number; longitude: number }) {
-  settingsForm.value.cityName = city.name
-  settingsForm.value.latitude = city.latitude
-  settingsForm.value.longitude = city.longitude
-
-  showCitySuggestions.value = false
-  citySuggestions.value = []
-}
-
-// Close suggestions on click outside
-watch(showSettings, value => {
-  if (value) {
-    loadSettings()
-    // Reset suggestion state
-    citySuggestions.value = []
-    showCitySuggestions.value = false
-  }
-})
-
-async function loadSettings() {
-  loadingSettings.value = true
-  settingsError.value = null
-  try {
-    const [weatherSettings, currentName] = await Promise.all([
-      window.electronAPI.getWeatherSettings(),
-      window.electronAPI.getSetting('displayName'),
-    ])
-
-    settingsForm.value = {
-      locationMode: weatherSettings.locationMode,
-      cityName: weatherSettings.cityName || '',
-      latitude: weatherSettings.latitude,
-      longitude: weatherSettings.longitude,
-      units: weatherSettings.units,
-      displayName: (currentName as string) || 'Alvaro',
-    }
-  } catch (error) {
-    console.error('Failed to load settings', error)
-    settingsError.value = 'Unable to load settings.'
-  } finally {
-    loadingSettings.value = false
-  }
-}
-
-async function saveSettings() {
-  settingsError.value = null
-
-  if (settingsForm.value.locationMode === 'city' && !settingsForm.value.cityName?.trim()) {
-    settingsError.value = 'Enter a city name.'
-    return
-  }
-
-  if (
-    settingsForm.value.locationMode === 'latlon' &&
-    (settingsForm.value.latitude === undefined || settingsForm.value.longitude === undefined)
-  ) {
-    settingsError.value = 'Provide both latitude and longitude.'
-    return
-  }
-
-  savingSettings.value = true
-  try {
-    // Save Display Name
-    await window.electronAPI.setSetting('displayName', settingsForm.value.displayName)
-
-    // Save Weather Settings
-    // Convert reactive object to plain object for IPC serialization and strip extra fields
-    const weatherPayload: WeatherSettings = {
-      locationMode: settingsForm.value.locationMode as 'city' | 'latlon',
-      cityName: settingsForm.value.cityName || '',
-      latitude: settingsForm.value.latitude,
-      longitude: settingsForm.value.longitude,
-      units: settingsForm.value.units as 'metric' | 'imperial',
-    }
-
-    await window.electronAPI.setWeatherSettings(weatherPayload)
-    await fetchSnapshot(true)
-    showSettings.value = false
-  } catch (error) {
-    console.error('Failed to save settings', error)
-    settingsError.value = 'Failed to save settings.'
-  } finally {
-    savingSettings.value = false
-  }
-}
 
 // Health helpers
 const healthTrend = computed(() => {
@@ -1254,6 +1149,7 @@ const latestSleepMinutes = computed(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  gap: var(--space-sm);
 }
 
 .strava-stats {
@@ -1282,6 +1178,12 @@ const latestSleepMinutes = computed(() => {
   margin-bottom: var(--space-md);
 }
 
+.strava-chart {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
 .tile--tasks {
   flex: 2;
 }
@@ -1297,6 +1199,33 @@ const latestSleepMinutes = computed(() => {
   gap: var(--space-sm);
 }
 
+.tasks-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  position: relative;
+}
+
+/* Task list animations */
+.task-list-enter-active,
+.task-list-leave-active {
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.task-list-enter-from {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.task-list-leave-to {
+  opacity: 0;
+  transform: translateX(16px);
+}
+
+.task-list-move {
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
 .task-item {
   display: flex;
   align-items: center;
@@ -1305,8 +1234,9 @@ const latestSleepMinutes = computed(() => {
   padding: var(--space-sm);
   background: rgba(255, 255, 255, 0.04);
   border-radius: var(--radius-sm);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .task-item:hover {
@@ -1321,6 +1251,26 @@ const latestSleepMinutes = computed(() => {
   text-decoration: line-through;
 }
 
+/* Completing animation state */
+.task-item--completing {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.2);
+  transform: scale(0.98);
+}
+
+.task-item--completing .task-checkbox {
+  background: var(--color-green);
+  border-color: var(--color-green);
+  color: var(--color-white);
+  animation: check-pop 0.2s var(--ease-out);
+}
+
+@keyframes check-pop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
 .task-checkbox {
   width: 18px;
   height: 18px;
@@ -1331,6 +1281,36 @@ const latestSleepMinutes = computed(() => {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
   color: var(--color-green);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+/* Inline task input */
+.task-inline-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.task-inline-input {
+  flex: 1;
+  padding: var(--space-sm) 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.task-inline-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.task-inline-input::placeholder {
+  color: var(--text-muted);
 }
 
 .task-item--completed .task-checkbox {
@@ -1401,8 +1381,255 @@ const latestSleepMinutes = computed(() => {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.tasks-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+}
+
+.tasks-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.tasks-page__list--compact .tasks-page__item {
+  padding: 8px 10px;
+}
+
+.tasks-page__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.tasks-page__item--action {
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.tasks-page__item--action:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tasks-page__item-action {
+  font-size: var(--text-xs);
+  color: var(--color-green);
+}
+
+.tasks-page__item--complete {
+  gap: var(--space-sm);
+}
+
+.tasks-page__empty {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.tasks-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.tasks-page__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
 .tile--health {
   flex: 1.5;
+}
+
+.reading-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-md);
+}
+
+.reading-page__reference {
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
+}
+
+.reading-page__text {
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  margin: 0 0 var(--space-md);
+  color: var(--text-primary);
+}
+
+.reading-page__progress {
+  margin-top: var(--space-md);
+}
+
+.reading-page__label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-xs);
+}
+
+.reading-page__progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.reading-page__progress-fill {
+  height: 100%;
+  background: var(--color-green);
+  border-radius: var(--radius-full);
+}
+
+.reading-page__actions {
+  margin-top: var(--space-md);
+}
+
+.reading-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.reading-history__item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: var(--text-sm);
+}
+
+.reading-history__ref {
+  color: var(--text-primary);
+}
+
+.reading-history__date {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.music-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-md);
+}
+
+.music-now-playing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.music-now-playing__headline {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+}
+
+.music-now-playing__artist {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.music-now-playing__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.music-now-playing__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.music-now-playing__bar-fill {
+  height: 100%;
+  background: var(--color-green);
+  border-radius: var(--radius-full);
+}
+
+.music-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+}
+
+.music-page__title {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  margin: 0;
+}
+
+.music-page__copy {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.music-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.music-status__label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.music-status__value {
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  margin: 4px 0 0;
+}
+
+.music-connect {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.music-connect:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .health-content {
@@ -1450,61 +1677,91 @@ const latestSleepMinutes = computed(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding-top: var(--space-xs);
+  gap: var(--space-sm);
+}
+
+.bible-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .bible-reference {
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-  color: rgba(255, 255, 255, 0.95);
-  letter-spacing: -0.01em;
-  margin: 0 0 var(--space-sm) 0;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: var(--radius-chip);
+}
+
+.bible-verse-container {
+  flex: 1;
+  display: flex;
+  gap: var(--space-sm);
+  overflow: hidden;
+}
+
+.bible-verse-border {
+  width: 3px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
 }
 
 .bible-verse {
   margin: 0;
-  flex: 1;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+  font-style: italic;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
 }
 
-.bible-verse__main {
-  font-size: var(--text-sm);
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.78);
-}
-
 .bible-verse__rest {
-  font-size: var(--text-xs);
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.bible-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--space-sm);
+  color: var(--text-primary);
 }
 
 .bible-button {
-  padding: var(--space-xs) var(--space-md);
-  background: var(--color-green);
-  border: 1px solid var(--color-green);
-  border-radius: var(--radius-chip);
-  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: 10px var(--space-md);
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: var(--radius-sm);
+  color: var(--color-green);
   font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+  transition: all var(--duration-fast) var(--ease-out);
+  margin-top: auto;
+}
+
+.bible-button:hover {
+  background: rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.bible-button:active {
+  transform: scale(0.98);
 }
 
 .bible-button--done {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
-  border-color: transparent;
+}
+
+.bible-button--done:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Bottom Row */
@@ -1553,33 +1810,68 @@ const latestSleepMinutes = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: var(--space-sm);
+  height: 100%;
 }
 
 .weather-settings-btn {
-  width: 28px;
-  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-tertiary);
   cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.weather-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+/* Weather Loading State */
+.weather-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--text-tertiary);
+}
+
+.weather-loading__icon {
+  opacity: 0.4;
+  animation: weather-pulse 2s ease-in-out infinite;
+}
+
+@keyframes weather-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.weather-loading__text {
+  font-size: var(--text-sm);
 }
 
 .weather-today {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
 }
 
 .weather-icon {
   color: var(--color-orange);
-  margin-bottom: var(--space-xs);
 }
 
 .weather-temps {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-xs);
+  flex-direction: column;
+  align-items: center;
 }
 
 .weather-current {
@@ -1587,6 +1879,7 @@ const latestSleepMinutes = computed(() => {
   font-weight: var(--font-bold);
   color: var(--color-white);
   letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 .weather-range {
@@ -1602,22 +1895,20 @@ const latestSleepMinutes = computed(() => {
   opacity: 0.6;
 }
 
-.weather-label {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  opacity: 0.8;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.weather-meta {
+  text-align: center;
 }
 
-.weather-location {
-  font-size: var(--text-sm);
+.weather-condition {
+  font-size: var(--text-xs);
   color: var(--text-secondary);
+  text-transform: capitalize;
 }
 
 .weather-week {
   display: flex;
   gap: var(--space-sm);
+  margin-top: auto;
 }
 
 .weather-day {
@@ -1627,15 +1918,40 @@ const latestSleepMinutes = computed(() => {
   gap: 2px;
 }
 
-.weather-day-name {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
+.weather-footer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: var(--space-xs);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.weather-day-date {
-  font-size: var(--text-sm);
+.weather-location {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.weather-updated {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.weather-day-name {
+  font-size: 10px;
   font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.weather-day-high {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
+}
+
+.weather-day-low {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
 }
 
 .task-form {
@@ -1905,17 +2221,13 @@ const latestSleepMinutes = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
-  padding: var(--space-md);
 }
 
 .health-hero-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding: var(--space-md);
-  border-radius: var(--radius-tile);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
+  padding-top: var(--space-sm);
 }
 
 .health-hero-card__ring {
@@ -1973,10 +2285,6 @@ const latestSleepMinutes = computed(() => {
 }
 
 .health-trend-card {
-  padding: var(--space-md);
-  border-radius: var(--radius-tile);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);

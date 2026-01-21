@@ -1,18 +1,24 @@
+import { randomUUID } from 'node:crypto'
 import OpenAI from 'openai'
 import { getDatabase, getSetting, setLastSync } from '../db/database'
 import { validateAIResponse } from '../../shared/schemas'
 import { getTodayLogicalDay } from '../../shared/utils/logical-day'
 import type { AITaskSuggestion } from '../../shared/types'
+import { getSecureValue } from '../security/secure-store'
 
 // AI throttle state
 let aiRunsToday = 0
 let failedAttempts = 0
 
+function resolveOpenAIKey(): string | null {
+  return process.env.OPENAI_API_KEY || getSecureValue('openai_api_key')
+}
+
 /**
  * Generate AI task suggestions based on user activity data
  */
 export async function generateTaskSuggestions(): Promise<AITaskSuggestion[]> {
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = resolveOpenAIKey()
   if (!apiKey) {
     console.warn('OpenAI API key not configured - skipping AI suggestions')
     return []
@@ -123,7 +129,7 @@ Generate ${maxSuggestions} personalized task suggestions for today.`,
     `)
 
     for (const suggestion of suggestions) {
-      const id = crypto.randomUUID()
+      const id = randomUUID()
       insertStmt.run(id, today, suggestion.title, suggestion.reason, Date.now())
     }
 
@@ -232,7 +238,7 @@ export function resetDailyAICounters(): void {
  * Check if AI can run (for manual triggers)
  */
 export function canRunAI(): { allowed: boolean; reason?: string } {
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = resolveOpenAIKey()
   if (!apiKey) {
     return { allowed: false, reason: 'OpenAI API key not configured' }
   }

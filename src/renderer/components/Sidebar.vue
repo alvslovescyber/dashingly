@@ -16,9 +16,10 @@
           class="sidebar__item"
           :class="{ 'sidebar__item--active': currentRoute === item.id }"
           :title="item.label"
-          @click="$emit('navigate', item.id)"
+          @click="handleNavClick(item.id)"
         >
           <component :is="item.icon" :size="20" :stroke-width="1.75" />
+          <span class="sidebar__tooltip">{{ item.label }}</span>
         </button>
       </div>
     </div>
@@ -28,9 +29,10 @@
         class="sidebar__item"
         :class="{ 'sidebar__item--active': currentRoute === 'settings' }"
         title="Settings"
-        @click="$emit('navigate', 'settings')"
+        @click="handleNavClick('settings')"
       >
         <Settings :size="20" :stroke-width="1.75" />
+        <span class="sidebar__tooltip">Settings</span>
       </button>
     </div>
   </nav>
@@ -53,7 +55,7 @@ interface Props {
 
 defineProps<Props>()
 
-defineEmits<{
+const emit = defineEmits<{
   navigate: [route: string]
 }>()
 
@@ -64,6 +66,10 @@ const navItems = [
   { id: 'reading', icon: BookOpen, label: 'Reading' },
   { id: 'music', icon: Music, label: 'Music' },
 ]
+
+function handleNavClick(route: string) {
+  emit('navigate', route)
+}
 </script>
 
 <style scoped>
@@ -73,7 +79,6 @@ const navItems = [
   justify-content: space-between;
   width: var(--sidebar-width);
   height: 100%;
-  /* Subtle transparency, letting shell background show */
   background: var(--glass-sidebar);
   border-right: var(--border-shell);
   padding: var(--space-md) var(--space-sm);
@@ -112,7 +117,7 @@ const navItems = [
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .sidebar__bottom {
@@ -122,6 +127,7 @@ const navItems = [
 }
 
 .sidebar__item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -130,10 +136,9 @@ const navItems = [
   background: transparent;
   border: none;
   border-radius: var(--radius-button);
-  /* Inactive = dimmer */
   color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  transition: all 0.2s ease-out;
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
 .sidebar__item:hover {
@@ -141,16 +146,65 @@ const navItems = [
   color: var(--text-primary);
 }
 
-/* ACTIVE = brighter + background pill + glow + inner highlight */
+/* Active state with animated indicator */
 .sidebar__item--active {
   background: var(--glass-active);
   color: var(--color-blue-light);
   box-shadow:
-    0 0 12px rgba(59, 130, 246, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 16px rgba(59, 130, 246, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Active indicator bar */
+.sidebar__item--active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--color-blue);
+  border-radius: var(--radius-full);
+  animation: indicator-slide 0.25s var(--ease-out);
+}
+
+@keyframes indicator-slide {
+  from {
+    opacity: 0;
+    height: 8px;
+  }
+  to {
+    opacity: 1;
+    height: 20px;
+  }
 }
 
 .sidebar__item:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
+}
+
+/* Tooltip */
+.sidebar__tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  z-index: 100;
+}
+
+.sidebar__item:hover .sidebar__tooltip {
+  opacity: 1;
 }
 </style>

@@ -28,22 +28,31 @@ export function useVerseOfDay() {
     return `${month}-${day}`
   })
 
-  // Find verse for today, or use a fallback
-  const todayVerse = computed<Verse>(() => {
-    const verse = versesData.verses.find(v => v.date === todayKey.value)
-    if (verse) return verse
+  const todayIndex = computed(() => {
+    const verseIndex = versesData.verses.findIndex(v => v.date === todayKey.value)
+    if (verseIndex !== -1) return verseIndex
 
     // Fallback: use index based on day of year
-    const dayOfYear = Math.floor(
-      (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-    )
-    const index = dayOfYear % versesData.verses.length
-    // Guaranteed to have at least one verse in the data file
-    return versesData.verses[index] as Verse
+    const startOfYear = new Date(new Date().getFullYear(), 0, 0).getTime()
+    const dayOfYear = Math.floor((Date.now() - startOfYear) / 86400000)
+    return dayOfYear % versesData.verses.length
+  })
+
+  // Find verse for today
+  const todayVerse = computed<Verse>(() => {
+    return versesData.verses[todayIndex.value] as Verse
   })
 
   const reference = computed(() => todayVerse.value.reference)
   const text = computed(() => todayVerse.value.text)
+
+  const history = computed<Verse[]>(() => {
+    return Array.from({ length: 3 }, (_, offset) => {
+      const index =
+        (todayIndex.value - offset - 1 + versesData.verses.length) % versesData.verses.length
+      return versesData.verses[index] as Verse
+    })
+  })
 
   function markDone() {
     completed.value = !completed.value
@@ -55,5 +64,6 @@ export function useVerseOfDay() {
     completed,
     markDone,
     source: versesData.source,
+    history,
   }
 }

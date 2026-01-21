@@ -1,7 +1,14 @@
-import { app, BrowserWindow, ipcMain, safeStorage } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from 'electron'
+import { promises as fs } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { initDatabase, closeDatabase, getSetting, setSetting } from '../src/main/db/database'
+import {
+  initDatabase,
+  closeDatabase,
+  getSetting,
+  setSetting,
+  getDatabasePath,
+} from '../src/main/db/database'
 import { getDashboardSnapshot } from '../src/main/db/snapshot'
 import { seedDatabase } from '../src/main/db/seed'
 import {
@@ -21,6 +28,8 @@ import {
   getWeatherStatus,
   searchCities,
 } from '../src/main/integrations/weather'
+import { generateTaskSuggestions, canRunAI } from '../src/main/integrations/ai-tasks'
+import { clearSecureValue, hasSecureValue, saveSecureValue } from '../src/main/security/secure-store'
 import type { WeatherSettings } from '../src/shared/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -195,9 +204,68 @@ function setupIPC() {
     dismissSuggestion(id)
   })
 
+  ipcMain.handle('trigger-ai-suggestions', async () => {
+    const status = canRunAI()
+    if (!status.allowed) {
+      return { success: false, reason: status.reason }
+    }
+
+    try {
+      const suggestions = await generateTaskSuggestions()
+      return { success: true, suggestions }
+    } catch (error) {
+      console.error('Manual AI trigger failed', error)
+      return { success: false, reason: 'Failed to generate suggestions' }
+    }
+  })
+
+  ipcMain.handle('get-openai-key-status', () => {
+    return { hasKey: hasSecureValue('openai_api_key') }
+  })
+
+  ipcMain.handle('set-openai-key', async (_event, key: string | null) => {
+    if (!key || !key.trim()) {
+      clearSecureValue('openai_api_key')
+      return { saved: false }
+    }
+
+    saveSecureValue('openai_api_key', key.trim())
+    return { saved: true }
+  })
+
   // Bible actions
   ipcMain.handle('mark-bible-complete', async () => {
     markBibleComplete()
+  })
+
+  // Data utilities
+  ipcMain.handle('export-database', async () => {
+    const windowRef = mainWindow ?? BrowserWindow.getFocusedWindow()
+    const dialogOptions: Electron.SaveDialogOptions = {
+      title: 'Export GlassPi Database',
+      defaultPath: 'glasspi-backup.db',
+      buttonLabel: 'Export',
+      filters: [
+        { name: 'SQLite Database', extensions: ['db'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    } as const
+
+    const { canceled, filePath } = windowRef
+      ? await dialog.showSaveDialog(windowRef, dialogOptions)
+      : await dialog.showSaveDialog(dialogOptions)
+
+    if (canceled || !filePath) {
+      return { canceled: true }
+    }
+
+    await fs.copyFile(getDatabasePath(), filePath)
+    return { canceled: false, filePath }
+  })
+
+  ipcMain.handle('reset-demo-data', async () => {
+    seedDatabase()
+    return { success: true }
   })
 }
 

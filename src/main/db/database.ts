@@ -10,18 +10,28 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 let db: Database.Database | null = null
 
 /**
+ * Cache the resolved database path so repeated lookups don't need to
+ * recalculate the same values.
+ */
+let cachedDbPath: string | null = null
+
+/**
  * Get the database file path
  * In production: userData directory
  * In development: project root
  */
-function getDbPath(): string {
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
-
-  if (isDev) {
-    return join(process.env.APP_ROOT || __dirname, 'data', 'glasspi.db')
+function resolveDbPath(): string {
+  if (cachedDbPath) {
+    return cachedDbPath
   }
 
-  return join(app.getPath('userData'), 'glasspi.db')
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+
+  cachedDbPath = isDev
+    ? join(process.env.APP_ROOT || __dirname, 'data', 'glasspi.db')
+    : join(app.getPath('userData'), 'glasspi.db')
+
+  return cachedDbPath
 }
 
 /**
@@ -30,7 +40,7 @@ function getDbPath(): string {
 export function initDatabase(): Database.Database {
   if (db) return db
 
-  const dbPath = getDbPath()
+  const dbPath = resolveDbPath()
 
   // Ensure directory exists
   const dbDir = dirname(dbPath)
@@ -120,6 +130,13 @@ function runSchema(database: Database.Database): void {
     console.error('Error running schema:', error)
     throw error
   }
+}
+
+/**
+ * Expose the physical database file path for utilities like export.
+ */
+export function getDatabasePath(): string {
+  return resolveDbPath()
 }
 
 /**

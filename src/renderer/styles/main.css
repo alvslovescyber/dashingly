@@ -29,8 +29,8 @@
   --sidebar-width: 72px;
   --topbar-height: 64px;
 
-  /* Blur - SPECIFIC SHELL ONLY */
-  --blur-glass-shell: 20px;
+  /* Blur - SPECIFIC SHELL ONLY (reduced for better performance) */
+  --blur-glass-shell: 16px;
 
   /* Shadows - MACHINED PRECISION */
   --shadow-shell: 0 30px 80px rgba(0, 0, 0, 0.35); /* Deeper shell shadow */
@@ -40,29 +40,29 @@
 
   /* Glass Colors - HIERARCHY (DARKENED for better contrast) */
   /* Shell: Darker base with blur - lets text pop */
-  --glass-shell: rgba(18, 28, 34, 0.55);
+  --glass-shell: rgba(16, 24, 32, 0.65);
 
   /* Tiles: NO BLUR, Stronger Gradient */
   --glass-tile: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(255, 255, 255, 0.10) 0%,
+    rgba(255, 255, 255, 0.04) 100%
   );
   --glass-tile-hover: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(255, 255, 255, 0.07) 100%
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.06) 100%
   );
 
   /* Daily Reading tile - slightly more solid */
   --glass-tile-solid: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.18) 0%,
-    rgba(255, 255, 255, 0.08) 100%
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.07) 100%
   );
 
-  --glass-sidebar: rgba(0, 0, 0, 0.15);
-  --glass-active: rgba(255, 255, 255, 0.18);
+  --glass-sidebar: rgba(0, 0, 0, 0.2);
+  --glass-active: rgba(255, 255, 255, 0.16);
 
   /* Borders - PRECISE */
   --border-tile: 1px solid rgba(255, 255, 255, 0.14);
@@ -81,11 +81,11 @@
   --color-purple: #8b5cf6;
   --color-white: #ffffff;
 
-  /* Text - STRONGER HIERARCHY (bumped secondary/tertiary for legibility) */
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(255, 255, 255, 0.65);
-  --text-tertiary: rgba(255, 255, 255, 0.45);
-  --text-muted: rgba(255, 255, 255, 0.3);
+  /* Text - STRONGER HIERARCHY (bumped for better legibility) */
+  --text-primary: rgba(255, 255, 255, 0.96);
+  --text-secondary: rgba(255, 255, 255, 0.72);
+  --text-tertiary: rgba(255, 255, 255, 0.50);
+  --text-muted: rgba(255, 255, 255, 0.35);
 
   /* Animation */
   --duration-fast: 150ms;
@@ -200,6 +200,66 @@ body {
 .animate-scale-in {
   animation: scaleIn var(--duration-fast) var(--ease-out);
 }
+
+/* Page transition utilities */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes page-leave {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+.page-transition-enter {
+  animation: page-enter var(--duration-normal) var(--ease-out);
+}
+
+.page-transition-leave {
+  animation: page-leave var(--duration-fast) var(--ease-out);
+}
+
+/* Tile interaction states */
+.tile-interactive {
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.tile-interactive:hover {
+  transform: translateY(-2px);
+}
+
+.tile-interactive:active {
+  transform: scale(0.98);
+}
+
+/* Button press effect */
+.btn-press:active {
+  transform: scale(0.96);
+  transition: transform 0.1s ease;
+}
+
+/* Stagger animation for lists */
+.stagger-item {
+  animation: slideUp var(--duration-normal) var(--ease-out) both;
+}
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
 
 /* Prevent image drag */
 img {

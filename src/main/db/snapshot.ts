@@ -163,7 +163,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 /**
  * Get default settings
  */
-function getDefaultSettings(): Settings {
+export function getDefaultSettings(): Settings {
   return {
     mockMode: false,
     debugMode: false,
@@ -181,6 +181,12 @@ function getDefaultSettings(): Settings {
       quietHoursEnabled: true,
     },
     weather: getDefaultWeatherSettings(),
+    ai: {
+      model: 'gpt-4o-mini',
+      maxSuggestionsPerDay: 5,
+      autoGenerateEnabled: true,
+      autoGenerateTime: '12:00',
+    },
   }
 }
 

@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   acceptSuggestion: (id: string) => ipcRenderer.invoke('accept-suggestion', id),
   dismissSuggestion: (id: string) => ipcRenderer.invoke('dismiss-suggestion', id),
   triggerAISuggestions: () => ipcRenderer.invoke('trigger-ai-suggestions'),
+  getOpenAIKeyStatus: () => ipcRenderer.invoke('get-openai-key-status'),
+  setOpenAIKey: (key: string | null) => ipcRenderer.invoke('set-openai-key', key),
 
   // Strava
   getStravaStatus: () => ipcRenderer.invoke('get-strava-status'),
@@ -58,6 +60,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBrightnessSchedule: () => ipcRenderer.invoke('get-brightness-schedule'),
   setBrightnessSchedule: (schedule: unknown) =>
     ipcRenderer.invoke('set-brightness-schedule', schedule),
+  exportDatabase: () => ipcRenderer.invoke('export-database'),
+  resetDemoData: () => ipcRenderer.invoke('reset-demo-data'),
 
   // Event listeners
   onMainProcessMessage: (callback: (message: string) => void) => {
@@ -96,7 +100,9 @@ declare global {
       getTaskSuggestions: () => Promise<unknown[]>
       acceptSuggestion: (id: string) => Promise<void>
       dismissSuggestion: (id: string) => Promise<void>
-      triggerAISuggestions: () => Promise<void>
+      triggerAISuggestions: () => Promise<{ success: boolean; reason?: string; suggestions?: unknown[] }>
+      getOpenAIKeyStatus: () => Promise<{ hasKey: boolean }>
+      setOpenAIKey: (key: string | null) => Promise<{ saved: boolean }>
       getStravaStatus: () => Promise<unknown>
       getStravaAuthUrl: () => Promise<string>
       disconnectStrava: () => Promise<void>
@@ -113,6 +119,8 @@ declare global {
       setBrightness: (value: number) => Promise<void>
       getBrightnessSchedule: () => Promise<unknown>
       setBrightnessSchedule: (schedule: unknown) => Promise<void>
+      exportDatabase: () => Promise<{ canceled: boolean; filePath?: string }>
+      resetDemoData: () => Promise<{ success: boolean }>
       onMainProcessMessage: (callback: (message: string) => void) => void
       onSpotifyUpdate: (callback: (data: unknown) => void) => void
       onNotification: (callback: (data: unknown) => void) => void

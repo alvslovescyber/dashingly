@@ -44,6 +44,22 @@ export const settingsSchema = z.object({
       cityName: 'New York',
       units: 'metric',
     }),
+  ai: z
+    .object({
+      model: z.string().default('gpt-4o-mini'),
+      maxSuggestionsPerDay: z.number().int().min(1).max(10).default(5),
+      autoGenerateEnabled: z.boolean().default(true),
+      autoGenerateTime: z
+        .string()
+        .regex(/^\d{2}:\d{2}$/)
+        .default('12:00'),
+    })
+    .default({
+      model: 'gpt-4o-mini',
+      maxSuggestionsPerDay: 5,
+      autoGenerateEnabled: true,
+      autoGenerateTime: '12:00',
+    }),
 })
 
 // ============================================

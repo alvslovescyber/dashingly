@@ -37,6 +37,7 @@ interface Props {
   showPoints?: boolean
   height?: number
   smartScale?: boolean
+  minValue?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -46,11 +47,25 @@ const props = withDefaults(defineProps<Props>(), {
   showPoints: false,
   height: 80,
   smartScale: true,
+  minValue: undefined,
 })
 
 
 const canvas = ref<HTMLCanvasElement>()
 let chart: Chart | null = null
+
+function getYScaleConfig() {
+  const minValue = props.minValue ?? 0
+  if (props.smartScale) {
+    return {
+      suggestedMin: minValue,
+      grace: '10%',
+    }
+  }
+  return {
+    min: minValue,
+  }
+}
 
 function createChart() {
   if (!canvas.value) return
@@ -77,11 +92,11 @@ function createChart() {
           data: props.data,
           borderColor: props.color,
           backgroundColor: gradient,
-          borderWidth: 2,
+          borderWidth: 2.5,
           fill: true,
-          tension: 0.4,
-          pointRadius: props.showPoints ? 3 : 0,
-          pointHoverRadius: 5,
+          tension: 0.45,
+          pointRadius: props.showPoints ? 4 : 0,
+          pointHoverRadius: 6,
           pointBackgroundColor: props.color,
           pointBorderColor: '#fff',
           pointBorderWidth: 2,
@@ -91,7 +106,10 @@ function createChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 600 },
+      animation: {
+        duration: 800,
+        easing: 'easeOutQuart',
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -99,17 +117,21 @@ function createChart() {
           mode: 'index',
           intersect: false,
           displayColors: false,
-          padding: 10,
-          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          padding: { x: 12, y: 8 },
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
           titleColor: 'rgba(255, 255, 255, 0.95)',
           bodyColor: 'rgba(255, 255, 255, 0.85)',
-          titleFont: { size: 13, weight: 'bold', family: 'Inter' },
-          bodyFont: { size: 12, family: 'Inter' },
+          titleFont: { size: 12, weight: 600, family: 'Inter' },
+          bodyFont: { size: 14, weight: 700, family: 'Inter' },
           cornerRadius: 8,
-          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderColor: 'rgba(255, 255, 255, 0.12)',
           borderWidth: 1,
+          caretSize: 6,
+          caretPadding: 8,
         },
       },
+      // Touch-friendly events for tooltips
+      events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
       layout: {
         padding: { left: 0, right: 0, top: 10, bottom: 0 },
       },
@@ -122,30 +144,25 @@ function createChart() {
           display: true,
           grid: {
             display: true,
-            color: 'rgba(255, 255, 255, 0.1)',
+            color: 'rgba(255, 255, 255, 0.06)',
+            lineWidth: 1,
           },
           ticks: {
             display: true,
-            color: 'rgba(255, 255, 255, 0.5)',
+            color: 'rgba(255, 255, 255, 0.4)',
             font: { size: 10, family: 'Inter' },
-            maxTicksLimit: 5,
+            maxTicksLimit: 4,
             padding: 8,
           },
           border: { display: false },
-          ...(props.smartScale
-            ? {
-                grace: '10%', // Add 10% padding to top/bottom
-              }
-            : {
-                min: 0,
-              }),
+          ...getYScaleConfig(),
         },
       },
       elements: {
         point: {
           radius: 0,
-          hitRadius: 20,
-          hoverRadius: 4,
+          hitRadius: 30, // Larger hit area for touch
+          hoverRadius: 5,
           backgroundColor: props.color,
           borderWidth: 2,
           borderColor: '#FFF',
@@ -180,7 +197,23 @@ function refreshChart() {
 
   chart.data.labels = props.labels || props.data.map((_, i) => String(i))
   dataset.data = props.data
+  applyScaleOptions()
   chart.update()
+}
+
+function applyScaleOptions() {
+  if (!chart) return
+  const yScale = chart.options.scales?.y as Record<string, unknown> | undefined
+  if (!yScale) return
+
+  const config = getYScaleConfig()
+
+  // Reset values before applying new config
+  delete yScale.min
+  delete yScale.suggestedMin
+  delete yScale.grace
+
+  Object.assign(yScale, config)
 }
 
 watch(
@@ -189,6 +222,14 @@ watch(
     refreshChart()
   },
   { deep: true }
+)
+
+watch(
+  () => [props.minValue, props.smartScale],
+  () => {
+    applyScaleOptions()
+    chart?.update()
+  }
 )
 
 onMounted(() => {

@@ -34,6 +34,7 @@ export interface Settings {
     quietHoursEnabled: boolean
   }
   weather: WeatherSettings
+  ai: AIConfig
 }
 
 // ============================================

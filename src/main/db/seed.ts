@@ -2,6 +2,7 @@ import { getDatabase, setSetting } from './database'
 import { getTodayLogicalDay, addDays } from '../../shared/utils/logical-day'
 import { randomUUID } from 'node:crypto'
 import { getDefaultWeatherSettings } from '../integrations/weather'
+import { getDefaultSettings } from './snapshot'
 
 /**
  * Seed the database with realistic demo data
@@ -36,6 +37,7 @@ export function seedDatabase(): void {
   setSetting('spotify_connected', true)
   setSetting('bible_plan_start', today)
   setSetting('weather_settings', getDefaultWeatherSettings())
+  setSetting('settings', getDefaultSettings())
 
   // ============================================
   // Tasks

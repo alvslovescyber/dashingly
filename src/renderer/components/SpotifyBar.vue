@@ -1,54 +1,98 @@
 <template>
-  <div v-if="isVisible" class="spotify-bar" @click="handleClick">
+  <div class="spotify-tile" :class="stateClass">
+    <!-- State: Not Connected -->
     <template v-if="showUnavailable">
-      <div class="spotify-bar__empty">
-        <Music :size="40" />
-        <p class="spotify-bar__empty-title">Spotify unavailable</p>
-        <p class="spotify-bar__empty-copy">
-          Connect a Spotify Developer app to enable playback controls.
-        </p>
-      </div>
-    </template>
-    <template v-else>
-      <div class="spotify-bar__art">
-        <img
-          v-if="artSrc"
-          :src="artSrc"
-          :alt="album || 'Album cover'"
-          class="spotify-bar__art-image"
-          @error="handleArtError"
-        />
-        <div v-else class="spotify-bar__art-placeholder">
+      <div class="spotify-tile__empty">
+        <div class="spotify-tile__empty-icon">
           <Music :size="28" :stroke-width="1.5" />
         </div>
+        <div class="spotify-tile__empty-text">
+          <p class="spotify-tile__empty-title">Not connected</p>
+          <p class="spotify-tile__empty-copy">Connect Spotify from Settings to see playback.</p>
+        </div>
+        <button class="spotify-tile__retry" type="button" @click="$emit('manage')">
+          Open settings
+        </button>
+      </div>
+    </template>
+
+    <!-- State: Error -->
+    <template v-else-if="!hasTrack">
+      <div class="spotify-tile__empty">
+        <div class="spotify-tile__empty-icon">
+          <Music :size="28" :stroke-width="1.5" />
+        </div>
+        <div class="spotify-tile__empty-text">
+          <p class="spotify-tile__empty-title">No playback detected</p>
+          <p class="spotify-tile__empty-copy">Retry to refresh the current track.</p>
+        </div>
+        <button class="spotify-tile__retry" type="button" @click="$emit('retry')">
+          Retry
+        </button>
+      </div>
+    </template>
+
+    <!-- State: Connected -->
+    <template v-else>
+      <!-- Top Row: Art + Track Info (aligned baseline) -->
+      <div class="spotify-tile__main">
+        <!-- Album Art - Fixed 72x72 -->
+        <div class="spotify-tile__art">
+          <img
+            v-if="artSrc"
+            :src="artSrc"
+            :alt="album || 'Album cover'"
+            class="spotify-tile__art-image"
+            @error="handleArtError"
+          />
+          <div v-else class="spotify-tile__art-placeholder">
+            <Music :size="24" :stroke-width="1.5" />
+          </div>
+          <div v-if="isPlaying" class="spotify-tile__art-indicator" />
+        </div>
+
+        <!-- Track Info - Vertically Centered -->
+        <div class="spotify-tile__info">
+          <span class="spotify-tile__label">NOW PLAYING</span>
+          <p class="spotify-tile__track">{{ hasTrack ? track : 'Nothing playing' }}</p>
+          <p class="spotify-tile__artist">{{ hasTrack ? artist : 'Play something on Spotify' }}</p>
+        </div>
       </div>
 
-      <div class="spotify-bar__body">
-        <!-- Track Info + Controls -->
-        <div class="spotify-bar__row">
-          <div class="spotify-bar__info">
-            <span class="spotify-bar__label">Now Playing</span>
-            <p class="spotify-bar__track">
-              {{ hasTrack ? track : 'Nothing playing right now' }}
-            </p>
-            <p class="spotify-bar__artist">{{ hasTrack ? artist : 'Tap play on Spotify to begin' }}</p>
-          </div>
-
-          <div v-if="hasTrack" class="spotify-bar__controls">
-            <IconButton :icon="SkipBack" size="sm" variant="ghost" @click.stop="$emit('previous')" />
-            <button class="spotify-bar__play-btn" @click.stop="$emit('playPause')">
-              <component :is="isPlaying ? Pause : Play" :size="18" :stroke-width="2" />
-            </button>
-            <IconButton :icon="SkipForward" size="sm" variant="ghost" @click.stop="$emit('next')" />
-          </div>
+      <!-- Progress Bar -->
+      <div class="spotify-tile__progress">
+        <div class="spotify-tile__progress-bar">
+          <div class="spotify-tile__progress-fill" :style="{ width: `${progressPercent}%` }" />
         </div>
-
-        <!-- Progress -->
-        <div v-if="hasTrack" class="spotify-bar__progress">
-          <div class="spotify-bar__progress-bar">
-            <div class="spotify-bar__progress-fill" :style="{ width: `${progressPercent}%` }" />
-          </div>
+        <div v-if="hasTrack" class="spotify-tile__times">
+          <span>{{ formatTime(progressMs) }}</span>
+          <span>{{ formatTime(durationMs) }}</span>
         </div>
+      </div>
+
+      <!-- Controls Row -->
+      <div class="spotify-tile__controls">
+        <button
+          class="spotify-tile__btn"
+          :disabled="!hasTrack"
+          @click.stop="$emit('previous')"
+        >
+          <SkipBack :size="16" :stroke-width="2" />
+        </button>
+        <button
+          class="spotify-tile__play"
+          :class="{ 'spotify-tile__play--active': isPlaying }"
+          @click.stop="$emit('playPause')"
+        >
+          <component :is="isPlaying ? Pause : Play" :size="18" :stroke-width="2.5" />
+        </button>
+        <button
+          class="spotify-tile__btn"
+          :disabled="!hasTrack"
+          @click.stop="$emit('next')"
+        >
+          <SkipForward :size="16" :stroke-width="2" />
+        </button>
       </div>
     </template>
   </div>
@@ -58,10 +102,8 @@
 import { computed, ref, watch } from 'vue'
 import { Music, Play, Pause, SkipBack, SkipForward } from 'lucide-vue-next'
 import fallbackAlbumArt from '@renderer/assets/spotify-placeholder.svg'
-import IconButton from './IconButton.vue'
 
 interface Props {
-  isVisible: boolean
   isPlaying: boolean
   track: string
   artist: string
@@ -88,6 +130,8 @@ defineEmits<{
   playPause: []
   previous: []
   next: []
+  retry: []
+  manage: []
 }>()
 
 const progressPercent = computed(() => {
@@ -98,8 +142,20 @@ const progressPercent = computed(() => {
 const hasTrack = computed(() => Boolean(props.track))
 const showUnavailable = computed(() => !props.connected)
 
-function handleClick() {
-  // Show toast about Premium requirement
+// State class for different visual states
+const stateClass = computed(() => {
+  if (!props.connected) return 'spotify-tile--disconnected'
+  if (!hasTrack.value) return 'spotify-tile--error'
+  if (props.isPlaying) return 'spotify-tile--playing'
+  return 'spotify-tile--paused'
+})
+
+// Format milliseconds to mm:ss
+function formatTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 function handleArtError(event: Event) {
@@ -110,175 +166,281 @@ function handleArtError(event: Event) {
 </script>
 
 <style scoped>
-.spotify-bar {
+/* Spotify Tile - Clean Layout */
+.spotify-tile {
   display: flex;
-  gap: 12px;
-  padding: 8px 12px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-tile);
   box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-out);
+    0 4px 20px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all var(--duration-normal) var(--ease-out);
 }
 
-.spotify-bar:hover {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%);
-}
-
-.spotify-bar__art {
-  flex: 0 0 84px;
-  width: 84px;
-  height: 84px;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.spotify-tile--playing {
+  border-color: rgba(34, 197, 94, 0.35);
   box-shadow:
-    0 8px 20px rgba(0, 0, 0, 0.25),
+    0 6px 28px rgba(34, 197, 94, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.spotify-bar__art-image {
+.spotify-tile--paused {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.spotify-tile--error {
+  border-style: dashed;
+  opacity: 0.9;
+}
+
+.spotify-tile--disconnected {
+  opacity: 0.8;
+}
+
+/* Main Row: Art + Info */
+.spotify-tile__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* Album Art - Fixed 72x72 */
+.spotify-tile__art {
+  position: relative;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.spotify-tile__art-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.spotify-bar__art-placeholder {
+.spotify-tile__art-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(30, 41, 59, 0.8);
   color: var(--text-tertiary);
 }
 
-.spotify-bar__body {
+/* Playing indicator dot */
+.spotify-tile__art-indicator {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #1db954;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(29, 185, 84, 0.6);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+
+/* Track Info - Vertically Centered */
+.spotify-tile__info {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: var(--space-sm);
   min-width: 0;
+  gap: 2px;
 }
 
-.spotify-bar__row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.spotify-bar__info {
-  flex: 1;
-  min-width: 0;
-}
-
-.spotify-bar__empty {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  text-align: center;
-  color: var(--text-secondary);
-  padding: var(--space-md) 0;
-}
-
-.spotify-bar__empty-title {
+.spotify-tile__label {
+  font-size: 10px;
   font-weight: var(--font-semibold);
-  margin: 0;
-  color: var(--text-primary);
-}
-
-.spotify-bar__empty-copy {
-  margin: 0;
-  max-width: 240px;
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-
-.spotify-bar__label {
-  display: block;
-  font-size: var(--text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-  margin-bottom: 4px;
+  color: #1db954;
 }
 
-.spotify-bar__track {
-  font-size: var(--text-lg);
+.spotify-tile__track {
+  font-size: 15px;
   font-weight: var(--font-semibold);
   color: var(--color-white);
   margin: 0;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: -0.01em;
-}
-
-.spotify-bar__artist {
-  font-size: var(--text-sm);
-  color: rgba(255, 255, 255, 0.7);
-  margin: 2px 0 0;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.spotify-bar__controls {
+.spotify-tile__artist {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progress Bar */
+.spotify-tile__progress {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 4px;
-  flex-shrink: 0;
 }
 
-.spotify-bar__play-btn {
+.spotify-tile__progress-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.spotify-tile__progress-fill {
+  height: 100%;
+  background: #1db954;
+  border-radius: var(--radius-full);
+  transition: width 1s linear;
+}
+
+.spotify-tile__times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Controls Row */
+.spotify-tile__controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  gap: var(--space-sm);
+  padding-top: var(--space-xs);
+}
+
+.spotify-tile__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.spotify-tile__btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.spotify-tile__btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.spotify-tile__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Play/Pause Button */
+.spotify-tile__play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   background: var(--color-white);
   border: none;
   border-radius: 50%;
   color: #000;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: transform var(--duration-fast) var(--ease-out);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
-.spotify-bar__play-btn:hover {
-  transform: scale(1.05);
+.spotify-tile__play:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
-.spotify-bar__play-btn:active {
+.spotify-tile__play:active {
   transform: scale(0.95);
 }
 
-/* Progress */
-.spotify-bar__progress {
-  width: 100%;
-}
-
-.spotify-bar__progress-bar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.spotify-bar__progress-fill {
-  height: 100%;
+.spotify-tile__play--active {
   background: #1db954;
+  color: var(--color-white);
+}
+
+/* Empty State */
+.spotify-tile__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.spotify-tile__empty-icon {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  color: var(--text-tertiary);
+}
+
+.spotify-tile__empty-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.spotify-tile__empty-title {
+  font-size: 15px;
+  font-weight: var(--font-semibold);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.spotify-tile__empty-copy {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.spotify-tile__retry {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
   border-radius: var(--radius-full);
-  transition: width 1s linear;
+  font-size: var(--text-xs);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.spotify-tile__retry:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 </style>
