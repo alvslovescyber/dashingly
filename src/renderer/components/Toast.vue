@@ -1,12 +1,11 @@
 <template>
   <Teleport to="body">
     <TransitionGroup name="toast" tag="div" class="toast-container">
-      <div
+      <article
         v-for="toast in toasts"
         :key="toast.id"
         class="toast"
         :class="[`toast--${toast.type}`]"
-        @click="dismiss(toast.id)"
       >
         <component :is="getIcon(toast.type)" :size="18" class="toast__icon" />
         <div class="toast__content">
@@ -14,11 +13,19 @@
           <p v-if="toast.description" class="toast__description">
             {{ toast.description }}
           </p>
+          <button
+            v-if="toast.action"
+            class="toast__action"
+            type="button"
+            @click.stop="handleAction(toast)"
+          >
+            {{ toast.action.label }}
+          </button>
         </div>
-        <button class="toast__close" @click.stop="dismiss(toast.id)">
+        <button class="toast__close" type="button" @click.stop="dismiss(toast.id)">
           <X :size="14" />
         </button>
-      </div>
+      </article>
     </TransitionGroup>
   </Teleport>
 </template>
@@ -33,6 +40,10 @@ interface Toast {
   message: string
   description?: string
   duration?: number
+  action?: {
+    label: string
+    handler: () => void
+  }
 }
 
 const toasts = ref<Toast[]>([])
@@ -50,7 +61,7 @@ function getIcon(type: Toast['type']): Component {
 
 function show(toast: Omit<Toast, 'id'>) {
   const id = ++toastId
-  const duration = toast.duration ?? 4000
+  const duration = toast.duration ?? (toast.type === 'error' ? 6000 : 4500)
 
   toasts.value.push({ ...toast, id })
 
@@ -72,6 +83,11 @@ function dismissAll() {
   toasts.value = []
 }
 
+function handleAction(toast: Toast) {
+  toast.action?.handler()
+  dismiss(toast.id)
+}
+
 // Expose methods
 defineExpose({
   show,
@@ -89,11 +105,11 @@ defineExpose({
 <style scoped>
 .toast-container {
   position: fixed;
-  bottom: var(--space-lg);
-  right: var(--space-lg);
+  bottom: 18px;
+  right: 18px;
   display: flex;
   flex-direction: column-reverse;
-  gap: var(--space-sm);
+  gap: 10px;
   z-index: 9999;
   pointer-events: none;
 }
@@ -102,17 +118,18 @@ defineExpose({
   display: flex;
   align-items: flex-start;
   gap: var(--space-sm);
-  min-width: 300px;
-  max-width: 400px;
-  padding: var(--space-md);
-  background: var(--glass-dark-medium);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-glass);
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  background: rgba(13, 18, 30, 0.8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   pointer-events: auto;
-  cursor: pointer;
+  cursor: default;
 }
 
 .toast__icon {
@@ -121,19 +138,19 @@ defineExpose({
 }
 
 .toast--success .toast__icon {
-  color: var(--color-green);
+  color: #22c55e;
 }
 
 .toast--error .toast__icon {
-  color: var(--color-red);
+  color: #f87171;
 }
 
 .toast--info .toast__icon {
-  color: var(--color-blue);
+  color: #a5b4fc;
 }
 
 .toast--warning .toast__icon {
-  color: var(--color-orange);
+  color: #fbbf24;
 }
 
 .toast__content {
@@ -142,16 +159,36 @@ defineExpose({
 }
 
 .toast__message {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
   margin: 0;
 }
 
 .toast__description {
-  font-size: var(--text-xs);
+  font-size: 12px;
   color: var(--text-secondary);
-  margin: var(--space-xs) 0 0;
+  margin: 4px 0 6px;
+}
+
+.toast__action {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.toast__action:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .toast__close {
@@ -178,32 +215,32 @@ defineExpose({
 
 /* Transition Animations */
 .toast-enter-active {
-  animation: toastIn var(--duration-normal) var(--ease-out);
+  animation: toastIn 220ms var(--ease-out);
 }
 
 .toast-leave-active {
-  animation: toastOut var(--duration-fast) var(--ease-in);
+  animation: toastOut 180ms var(--ease-in);
 }
 
 @keyframes toastIn {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
 @keyframes toastOut {
   from {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
   to {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateY(12px);
   }
 }
 </style>

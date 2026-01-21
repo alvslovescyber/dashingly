@@ -11,7 +11,7 @@
         <button
           class="ai-inbox-generate"
           type="button"
-          :disabled="generating"
+          :disabled="generating || !connected"
           @click="emit('generate')"
         >
           {{ generating ? 'Refreshing…' : 'Refresh' }}
@@ -20,67 +20,77 @@
     </template>
 
     <div class="ai-inbox-content">
-      <!-- Suggestions List -->
-      <TransitionGroup
-        v-if="suggestions.length > 0"
-        name="suggestion"
-        tag="div"
-        class="ai-inbox-list"
-      >
-        <div
-          v-for="suggestion in displayedSuggestions"
-          :key="suggestion.id"
-          class="ai-inbox-item"
-          :class="{
-            'ai-inbox-item--accepting': acceptingId === suggestion.id,
-            'ai-inbox-item--dismissing': dismissingId === suggestion.id,
-          }"
-        >
-          <div class="ai-inbox-item__content">
-            <span class="ai-inbox-item__title">{{ suggestion.title }}</span>
-            <span class="ai-inbox-item__reason">
-              {{ formatReason(suggestion.reason) }}
-            </span>
-          </div>
-          <div class="ai-inbox-item__actions">
-            <button
-              class="ai-inbox-btn ai-inbox-btn--accept"
-              title="Accept suggestion"
-              :disabled="acceptingId === suggestion.id || dismissingId === suggestion.id"
-              @click="handleAccept(suggestion.id)"
-            >
-              <Check :size="12" :stroke-width="2.4" />
-            </button>
-            <button
-              class="ai-inbox-btn ai-inbox-btn--dismiss"
-              title="Dismiss suggestion"
-              :disabled="acceptingId === suggestion.id || dismissingId === suggestion.id"
-              @click="handleDismiss(suggestion.id)"
-            >
-              <X :size="12" :stroke-width="2.4" />
-            </button>
-          </div>
-        </div>
-      </TransitionGroup>
-
-      <!-- View All Button (outside transition) -->
-      <button
-        v-if="suggestions.length > 0"
-        class="ai-inbox-view-all"
-        type="button"
-        @click="handleViewAll"
-      >
-        View all<span v-if="suggestions.length > 3"> ({{ suggestions.length }})</span>
-      </button>
-
-      <!-- Empty State -->
-      <div v-if="suggestions.length === 0" class="ai-inbox-empty">
+      <div v-if="!connected" class="ai-inbox-empty ai-inbox-empty--connect">
         <div class="ai-inbox-empty__icon-wrap">
           <Zap :size="20" class="ai-inbox-empty__icon" />
         </div>
-        <span class="ai-inbox-empty__title">All caught up</span>
-        <span class="ai-inbox-empty__text">Next check at {{ nextSuggestionTime }}</span>
+        <span class="ai-inbox-empty__title">Connect OpenAI</span>
+        <span class="ai-inbox-empty__text">Add your key to generate suggestions.</span>
       </div>
+
+      <template v-else>
+        <!-- Suggestions List -->
+        <TransitionGroup
+          v-if="suggestions.length > 0"
+          name="suggestion"
+          tag="div"
+          class="ai-inbox-list"
+        >
+          <div
+            v-for="suggestion in displayedSuggestions"
+            :key="suggestion.id"
+            class="ai-inbox-item"
+            :class="{
+              'ai-inbox-item--accepting': acceptingId === suggestion.id,
+              'ai-inbox-item--dismissing': dismissingId === suggestion.id,
+            }"
+          >
+            <div class="ai-inbox-item__content">
+              <span class="ai-inbox-item__title">{{ suggestion.title }}</span>
+              <span class="ai-inbox-item__reason">
+                {{ formatReason(suggestion.reason) }}
+              </span>
+            </div>
+            <div class="ai-inbox-item__actions">
+              <button
+                class="ai-inbox-btn ai-inbox-btn--accept"
+                title="Accept suggestion"
+                :disabled="acceptingId === suggestion.id || dismissingId === suggestion.id"
+                @click="handleAccept(suggestion.id)"
+              >
+                <Check :size="12" :stroke-width="2.4" />
+              </button>
+              <button
+                class="ai-inbox-btn ai-inbox-btn--dismiss"
+                title="Dismiss suggestion"
+                :disabled="acceptingId === suggestion.id || dismissingId === suggestion.id"
+                @click="handleDismiss(suggestion.id)"
+              >
+                <X :size="12" :stroke-width="2.4" />
+              </button>
+            </div>
+          </div>
+        </TransitionGroup>
+
+        <!-- View All Button (outside transition) -->
+        <button
+          v-if="suggestions.length > 0"
+          class="ai-inbox-view-all"
+          type="button"
+          @click="handleViewAll"
+        >
+          View all<span v-if="suggestions.length > 3"> ({{ suggestions.length }})</span>
+        </button>
+
+        <!-- Empty State -->
+        <div v-if="suggestions.length === 0" class="ai-inbox-empty">
+          <div class="ai-inbox-empty__icon-wrap">
+            <Zap :size="20" class="ai-inbox-empty__icon" />
+          </div>
+          <span class="ai-inbox-empty__title">All caught up</span>
+          <span class="ai-inbox-empty__text">Next check at {{ nextSuggestionTime }}</span>
+        </div>
+      </template>
     </div>
   </TileCard>
 </template>
@@ -100,12 +110,14 @@ interface Props {
   suggestions: AISuggestion[]
   nextSuggestionTime?: string
   generating?: boolean
+  connected?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   suggestions: () => [],
   nextSuggestionTime: '12:00',
   generating: false,
+  connected: true,
 })
 
 const emit = defineEmits<{
@@ -113,6 +125,7 @@ const emit = defineEmits<{
   dismiss: [id: string]
   viewAll: []
   generate: []
+  connect: []
 }>()
 
 // Animation state
@@ -219,6 +232,20 @@ function handleViewAll() {
   flex-direction: column;
   gap: 6px;
   position: relative;
+  max-height: 210px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+.ai-inbox-list::-webkit-scrollbar {
+  width: 6px;
+}
+.ai-inbox-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+.ai-inbox-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* TransitionGroup animations */
@@ -409,5 +436,10 @@ function handleViewAll() {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   text-align: center;
+}
+
+.ai-inbox-empty--connect {
+  gap: var(--space-sm);
+  margin-top: -6px;
 }
 </style>

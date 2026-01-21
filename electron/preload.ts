@@ -54,6 +54,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSpotifyAuthUrl: () => ipcRenderer.invoke('get-spotify-auth-url'),
   getSpotifyNowPlaying: () => ipcRenderer.invoke('get-spotify-now-playing'),
   disconnectSpotify: () => ipcRenderer.invoke('disconnect-spotify'),
+  playSpotify: () => ipcRenderer.invoke('spotify-play'),
+  pauseSpotify: () => ipcRenderer.invoke('spotify-pause'),
+  nextSpotify: () => ipcRenderer.invoke('spotify-next'),
+  previousSpotify: () => ipcRenderer.invoke('spotify-previous'),
 
   // Health
   getHealthStatus: () => ipcRenderer.invoke('get-health-status'),
@@ -132,6 +136,10 @@ declare global {
       getSpotifyAuthUrl: () => Promise<string>
       getSpotifyNowPlaying: () => Promise<unknown>
       disconnectSpotify: () => Promise<void>
+      playSpotify: () => Promise<{ success: boolean; reason?: string }>
+      pauseSpotify: () => Promise<{ success: boolean; reason?: string }>
+      nextSpotify: () => Promise<{ success: boolean; reason?: string }>
+      previousSpotify: () => Promise<{ success: boolean; reason?: string }>
       getHealthStatus: () => Promise<unknown>
       getHealthEndpointInfo: () => Promise<{ ip: string; port: number; endpoint: string }>
       getBibleToday: () => Promise<unknown>

@@ -223,6 +223,7 @@ export interface DashboardSnapshot {
   displayName: string
   timezone: string
   settings: Settings
+  hasOpenAIKey?: boolean
   tasks: Task[]
   taskCompletions: TaskCompletion[]
   suggestions: TaskSuggestion[]

@@ -63,6 +63,7 @@ export function useDashboard() {
   const displayName = computed(() => snapshot.value?.displayName ?? 'Friend')
   const timezone = computed(() => snapshot.value?.timezone ?? 'America/New_York')
   const settings = computed(() => snapshot.value?.settings)
+  const hasOpenAIKey = computed(() => snapshot.value?.hasOpenAIKey ?? false)
 
   // Tasks
   const tasks = computed<Task[]>(() => snapshot.value?.tasks ?? [])
@@ -106,7 +107,6 @@ export function useDashboard() {
 
   // Health
   const health = computed<HealthStatus | null>(() => snapshot.value?.health ?? null)
-
   const healthData = computed(() => ({
     steps: health.value?.steps ?? 0,
     stepsPercent: health.value?.stepsPercent ?? 0,
@@ -219,6 +219,7 @@ export function useDashboard() {
     displayName,
     timezone,
     settings,
+    hasOpenAIKey,
 
     // Tasks
     tasks,

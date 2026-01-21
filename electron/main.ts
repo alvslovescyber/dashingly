@@ -33,6 +33,7 @@ import {
 import { generateTaskSuggestions, canRunAI } from '../src/main/integrations/ai-tasks'
 import { clearSecureValue, hasSecureValue, saveSecureValue } from '../src/main/security/secure-store'
 import { startAuthServer, stopAuthServer, getAuthServerInfo } from '../src/main/auth/oauth-server'
+import { controlSpotifyPlayback } from '../src/main/db/snapshot'
 import type { WeatherSettings } from '../src/shared/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -309,6 +310,12 @@ function setupIPC() {
   ipcMain.handle('disconnect-strava', () => {
     disconnectIntegration('strava')
   })
+
+  // Spotify playback controls
+  ipcMain.handle('spotify-play', async () => controlSpotifyPlayback('play'))
+  ipcMain.handle('spotify-pause', async () => controlSpotifyPlayback('pause'))
+  ipcMain.handle('spotify-next', async () => controlSpotifyPlayback('next'))
+  ipcMain.handle('spotify-previous', async () => controlSpotifyPlayback('previous'))
 
   ipcMain.handle('get-strava-auth-url', () => {
     if (!authServerReady) {

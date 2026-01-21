@@ -1,18 +1,159 @@
-# Vue 3 + TypeScript + Vite
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+# GlassPi Dashboard
 
-## Recommended IDE Setup
+*A unified, local-first personal dashboard powered by Vue 3*
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+![GlassPi Dashboard – Home](./docs/images/home.png)
 
-## Type Support For `.vue` Imports in TS
+GlassPi is a **self-hosted personal dashboard** designed to run locally (Raspberry Pi, desktop, or server) and sync everything you care about in one place — music, activity, tasks, weather, and AI-powered suggestions.
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+The goal is simple:
+**clone the repo → add API keys → everything works flawlessly.**
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+No fake data. No broken states. No waiting around.
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+---
+
+## ✨ Features
+
+* 🎵 **Spotify – Now Playing**
+
+  * Real-time playback status
+  * Album art, progress, controls
+  * Clean empty states when not connected
+
+* 🏃 **Strava – Activity & Health**
+
+  * Weekly running totals & goals
+  * Steps, calories, activity summaries
+  * Single-source health data (no Apple Health required)
+
+* 📖 **Daily Reading**
+
+  * Daily verse + recent history
+  * Progress tracking
+  * Clean completion flow
+
+* ✅ **Tasks**
+
+  * Today / Upcoming / Completed
+  * Minimal, distraction-free layout
+
+* 🤖 **AI Suggestions**
+
+  * Scheduled or manual generation
+  * Works instantly after API key is added
+  * Graceful error handling & empty states
+
+* 🌦 **Weather**
+
+  * Location-based via Open-Meteo
+  * Auto-refresh + manual refresh
+  * Unit selection (°C / °F)
+
+---
+
+## 🖼 UI Preview
+
+### Home Dashboard
+
+![Home Dashboard](./docs/images/dashboard.png)
+
+### Activity Overview
+
+![Activity Overview](./docs/images/activity.png)
+
+### Tasks
+
+![Tasks](./docs/images/tasks.png)
+
+### Daily Reading
+
+![Daily Reading](./docs/images/reading.png)
+
+### Integrations & Settings
+
+![Settings](./docs/images/settings.png)
+
+> 📌 All screens share the **same layout system, spacing, and visual language**.
+> No sliding panels. No half-finished pages.
+
+---
+
+## 🧱 Tech Stack
+
+* **Vue 3** (Composition API + `<script setup>`)
+* **TypeScript**
+* **Vite**
+* **Local-first storage** (designed to sync immediately once keys are added)
+* **Electron / Pi-friendly runtime** (no cloud dependency)
+
+---
+
+## 🔑 Configuration Philosophy
+
+GlassPi does **not** ship with fake placeholders.
+
+* No Spotify UI unless Spotify is connected
+* No AI suggestions unless an OpenAI key is present
+* No health data unless Strava is connected
+
+Once you enter your API keys:
+
+> **Everything syncs automatically and stays in sync.**
+
+All configuration is done via the **Settings UI** — no `.env` editing required.
+
+---
+
+## ⚙️ Setup
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/your-username/glasspi-dashboard.git
+cd glasspi-dashboard
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Run locally
+
+```bash
+npm run dev
+```
+
+### 4. Open Settings → Integrations
+
+Add your API keys for:
+
+* Spotify
+* Strava
+* OpenAI (for suggestions)
+
+That’s it.
+The dashboard will immediately populate with real data.
+
+---
+
+## 🧠 TypeScript & Vue Notes
+
+This project uses **Vue 3 `<script setup>` SFCs**.
+
+Recommended IDE setup:
+
+* **VS Code**
+* **Volar**
+* **TypeScript Vue Plugin (Volar)**
+
+### Type checking
+
+TypeScript doesn’t understand `.vue` files by default, so this project uses:
+
+* `vue-tsc` instead of `tsc`
+
+

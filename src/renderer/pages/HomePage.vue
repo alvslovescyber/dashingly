@@ -51,6 +51,9 @@
                 class="tile--spotify"
                 @retry="handleSpotifyRetry"
                 @manage="openSettingsPanel"
+                @play-pause="handleSpotifyPlayPause"
+                @next="handleSpotifyNext"
+                @previous="handleSpotifyPrevious"
               />
 
               <!-- AI Inbox Tile -->
@@ -59,10 +62,12 @@
                 next-suggestion-time="12:00"
                 class="tile--ai-inbox"
                 :generating="aiGenerating"
+                :connected="aiConnected"
                 @accept="handleAIAccept"
                 @dismiss="handleAIDismiss"
                 @view-all="showAISuggestionsModal = true"
                 @generate="handleAIGenerate"
+                @connect="openSettingsPanel"
               />
             </div>
 
@@ -168,20 +173,22 @@
               <TileCard title="Health" :icon="Heart" class="tile--health" size="md">
                 <div class="health-content">
                   <div class="health-stat">
-                    <ProgressRing :value="healthData.stepsPercent" :size="64" color="#22c55e">
+                    <ProgressRing :value="healthDisplay.stepsPercent" :size="64" color="#22c55e">
                       <Footprints :size="20" />
                     </ProgressRing>
                     <div class="health-stat-info">
-                      <span class="health-stat-value">{{ healthData.steps.toLocaleString() }}</span>
+                      <span class="health-stat-value">{{
+                        healthDisplay.steps.toLocaleString()
+                      }}</span>
                       <span class="health-stat-label">Steps</span>
                     </div>
                   </div>
                   <div class="health-stat">
-                    <ProgressRing :value="healthData.caloriesPercent" :size="64" color="#F97316">
+                    <ProgressRing :value="healthDisplay.caloriesPercent" :size="64" color="#F97316">
                       <Flame :size="20" />
                     </ProgressRing>
                     <div class="health-stat-info">
-                      <span class="health-stat-value">{{ healthData.calories }}</span>
+                      <span class="health-stat-value">{{ healthDisplay.calories }}</span>
                       <span class="health-stat-label">Calories</span>
                     </div>
                   </div>
@@ -291,6 +298,7 @@
                         </div>
                       </div>
                       <div class="weather-meta">
+                        <span class="weather-location-inline">{{ weatherData.location }}</span>
                         <span class="weather-condition">{{ weatherData.condition }}</span>
                       </div>
                     </div>
@@ -302,7 +310,6 @@
                       </div>
                     </div>
                     <div class="weather-footer">
-                      <span class="weather-location">{{ weatherData.location }}</span>
                       <span class="weather-updated">{{ weatherUpdatedLabel }}</span>
                     </div>
                   </template>
@@ -317,12 +324,12 @@
               <TileCard title="Activity overview" :icon="Heart" size="lg" :interactive="false">
                 <div class="health-hero-card">
                   <div class="health-hero-card__ring">
-                    <ProgressRing :value="healthData.stepsPercent" :size="120">
+                    <ProgressRing :value="healthDisplay.stepsPercent" :size="120">
                       <Footprints :size="32" />
                     </ProgressRing>
                     <div class="health-hero-card__stat">
                       <span class="health-hero-card__value">
-                        {{ healthData.steps.toLocaleString() }}
+                        {{ healthDisplay.steps.toLocaleString() }}
                       </span>
                       <span class="health-hero-card__label">steps today</span>
                     </div>
@@ -330,19 +337,15 @@
                   <div class="health-hero-card__meta">
                     <div>
                       <span class="health-meta__label">Active calories</span>
-                      <p class="health-meta__value">{{ healthData.calories }}</p>
-                    </div>
-                    <div>
-                      <span class="health-meta__label">Sleep minutes</span>
-                      <p class="health-meta__value">{{ healthData.sleepMinutes }}</p>
+                      <p class="health-meta__value">{{ healthDisplay.calories }}</p>
                     </div>
                   </div>
                   <div
                     class="health-sync"
-                    :class="{ 'health-sync--warning': healthData.warningDays }"
+                    :class="{ 'health-sync--warning': healthDisplay.warning }"
                   >
                     <span>Last synced {{ healthSyncLabel }}</span>
-                    <span v-if="healthData.warningDays">Reconnect Health source</span>
+                    <span v-if="healthDisplay.warning">Reconnect Strava</span>
                   </div>
                 </div>
               </TileCard>
@@ -357,17 +360,6 @@
                     :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
                     color="#34d399"
                     gradient-start="rgba(52, 211, 153, 0.18)"
-                  />
-                </TileCard>
-                <TileCard title="Sleep minutes" class="health-trend-card" :interactive="false">
-                  <div class="health-trend-card__header">
-                    <span class="health-trend-card__value">{{ latestSleepMinutes }}</span>
-                  </div>
-                  <MiniChart
-                    :data="sleepTrend"
-                    :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
-                    color="#60a5fa"
-                    gradient-start="rgba(96, 165, 250, 0.2)"
                   />
                 </TileCard>
               </div>
@@ -666,6 +658,12 @@ type ToastHandle = {
   error: (message: string, description?: string) => void
   info: (message: string, description?: string) => void
   warning: (message: string, description?: string) => void
+  show?: (toast: {
+    type: 'success' | 'error' | 'info' | 'warning'
+    message: string
+    description?: string
+    action?: { label: string; handler: () => void }
+  }) => void
 }
 
 // Dashboard data from main process
@@ -677,11 +675,11 @@ const {
   totalTasks,
   aiSuggestions,
   stravaData,
-  healthData,
   spotifyData,
   bibleData,
   lastSync,
   weatherData,
+  hasOpenAIKey,
   completeTask,
   acceptSuggestion,
   dismissSuggestion,
@@ -693,8 +691,10 @@ const {
 
 const toast = inject<Ref<ToastHandle | undefined>>('toast')
 
-function notify(type: keyof ToastHandle, message: string, description?: string) {
-  toast?.value?.[type](message, description)
+type ToastMethod = Exclude<keyof ToastHandle, 'show'>
+
+function notify(type: ToastMethod, message: string, description?: string) {
+  toast?.value?.[type]?.(message, description)
 }
 
 // Navigation - Sections for swipe navigation
@@ -716,6 +716,7 @@ const showAllTasksModal = ref(false)
 const showAISuggestionsModal = ref(false)
 const aiGenerating = ref(false)
 const stravaEnabled = ref(true)
+const aiConnected = computed(() => hasOpenAIKey.value)
 
 function handleNavigate(route: string) {
   goToSectionById(route)
@@ -780,11 +781,29 @@ function handleAIDismiss(id: string) {
 
 async function handleAIGenerate() {
   if (aiGenerating.value) return
+  if (!aiConnected.value) {
+    toast?.value?.show?.({
+      type: 'warning',
+      message: 'OpenAI not connected',
+      description: 'Add your OpenAI key in Settings → AI.',
+      action: { label: 'Open settings', handler: openSettingsPanel },
+    })
+    return
+  }
   aiGenerating.value = true
   try {
     const result = await window.electronAPI.triggerAISuggestions()
     if (!result.success) {
-      notify('error', 'Unable to generate suggestions', result.reason)
+      if (result.reason?.toString().toLowerCase().includes('key')) {
+        toast?.value?.show?.({
+          type: 'warning',
+          message: 'OpenAI not connected',
+          description: 'Add your OpenAI key in Settings → AI.',
+          action: { label: 'Open settings', handler: openSettingsPanel },
+        })
+      } else {
+        notify('error', 'Unable to generate suggestions', result.reason)
+      }
       return
     }
     await fetchSnapshot(true)
@@ -804,6 +823,40 @@ async function handleSpotifyRetry() {
   } catch (error) {
     console.error('Spotify refresh failed', error)
     notify('error', 'Unable to refresh Spotify')
+  }
+}
+
+async function handleSpotifyPlayPause() {
+  try {
+    if (spotifyData.value.isPlaying) {
+      await window.electronAPI.pauseSpotify()
+    } else {
+      await window.electronAPI.playSpotify()
+    }
+    await fetchSnapshot(true)
+  } catch (error) {
+    console.error('Spotify play/pause failed', error)
+    notify('error', 'Unable to control Spotify')
+  }
+}
+
+async function handleSpotifyNext() {
+  try {
+    await window.electronAPI.nextSpotify()
+    await fetchSnapshot(true)
+  } catch (error) {
+    console.error('Spotify next failed', error)
+    notify('error', 'Unable to skip track')
+  }
+}
+
+async function handleSpotifyPrevious() {
+  try {
+    await window.electronAPI.previousSpotify()
+    await fetchSnapshot(true)
+  } catch (error) {
+    console.error('Spotify previous failed', error)
+    notify('error', 'Unable to go back')
   }
 }
 
@@ -960,16 +1013,33 @@ function handleBibleAction() {
 
 // Energy Chart
 const energyPeriod = ref<'weekly' | 'monthly'>('weekly')
+const stravaConnected = computed(() => stravaData.value.connected)
+const weeklyRunData = computed(() =>
+  stravaConnected.value ? [...stravaData.value.weekData] : [0, 0, 0, 0, 0, 0, 0]
+)
+
+const monthlyRunData = computed(() => {
+  const source = weeklyRunData.value
+  const buckets = [0, 0, 0, 0]
+  source.forEach((val, idx) => {
+    const bucket = Math.min(3, Math.floor(idx / 2))
+    if (bucket >= 0 && bucket < buckets.length) {
+      buckets[bucket] = (buckets[bucket] ?? 0) + val
+    }
+  })
+  return buckets
+})
+
 const energyChart = computed(() => {
   if (energyPeriod.value === 'weekly') {
     return {
       labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      data: [80, 120, 100, 140, 110, 130, 145],
+      data: weeklyRunData.value,
     }
   }
   return {
     labels: ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'],
-    data: [540, 610, 575, 630],
+    data: monthlyRunData.value,
   }
 })
 
@@ -1031,21 +1101,25 @@ const weatherUpdatedLabel = computed(() => formatRelativeTime(weatherData.value.
 
 // Settings form (Weather + General)
 
-// Health helpers
-const healthTrend = computed(() => {
-  const base = Math.max(2500, healthData.value.steps - 2000)
-  return Array.from({ length: 7 }, (_, index) => Math.round(base + Math.sin(index / 2) * 600))
+// Health helpers (powered by Strava for now)
+const healthDisplay = computed(() => {
+  if (!stravaConnected.value) {
+    return { steps: 0, stepsPercent: 0, calories: 0, caloriesPercent: 0, warning: true }
+  }
+  const weekKm = stravaData.value.weekData.reduce((sum, d) => sum + d, 0)
+  const steps = Math.round(weekKm * 1300) // rough conversion
+  const calories = Math.round(weekKm * 60) // rough run kcal estimate
+  const stepsPercent = Math.min(100, Math.round((steps / 10000) * 100))
+  const caloriesPercent = Math.min(100, Math.round((calories / 500) * 100))
+  return { steps, stepsPercent, calories, caloriesPercent, warning: false }
 })
-const sleepTrend = [420, 460, 410, 440, 400, 450, 430]
-const healthSyncLabel = computed(() => formatRelativeTime(lastSync.value.health))
+
+const healthTrend = computed(() => weeklyRunData.value)
+const healthSyncLabel = computed(() => formatRelativeTime(lastSync.value.strava))
 const latestHealthSteps = computed(() => {
   const trend = healthTrend.value
   const last = trend[trend.length - 1]
-  return last ? last.toLocaleString() : '--'
-})
-const latestSleepMinutes = computed(() => {
-  const last = sleepTrend[sleepTrend.length - 1]
-  return last ? `${last}m` : '--'
+  return last ? Math.round(last * 1300).toLocaleString() : '--'
 })
 </script>
 
@@ -1932,12 +2006,23 @@ const latestSleepMinutes = computed(() => {
 
 .weather-meta {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .weather-condition {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   text-transform: capitalize;
+}
+
+.weather-location-inline {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  opacity: 0.82;
+  font-weight: var(--font-medium);
 }
 
 .weather-week {
@@ -1955,19 +2040,15 @@ const latestSleepMinutes = computed(() => {
 
 .weather-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   width: 100%;
-  padding-top: var(--space-xs);
+  padding-top: var(--space-sm);
+  padding-bottom: 2px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.weather-location {
-  font-size: 10px;
-  color: var(--text-tertiary);
-}
-
 .weather-updated {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 

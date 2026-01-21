@@ -171,9 +171,7 @@
                 <div>
                   <p class="integration-card__eyebrow">Spotify</p>
                   <p class="integration-card__title">Playback bridge</p>
-                  <p class="integration-card__copy">
-                    Uses your client credentials to mirror now playing.
-                  </p>
+                  <p class="integration-card__copy">Mirror now playing from your account.</p>
                 </div>
                 <span
                   class="status-pill"
@@ -229,7 +227,7 @@
 
                 <div class="settings-actions settings-actions--inline">
                   <button
-                    class="settings-button"
+                    class="settings-button settings-button--ghost"
                     :disabled="integrationSaving.spotify"
                     @click="saveIntegrationCredentials('spotify')"
                   >
@@ -263,7 +261,7 @@
                 <div>
                   <p class="integration-card__eyebrow">Strava</p>
                   <p class="integration-card__title">Weekly running data</p>
-                  <p class="integration-card__copy">Syncs runs + goals for the activity tiles.</p>
+                  <p class="integration-card__copy">Sync runs and weekly targets.</p>
                 </div>
                 <span
                   class="status-pill"
@@ -325,7 +323,7 @@
 
                 <div class="settings-actions settings-actions--inline">
                   <button
-                    class="settings-button"
+                    class="settings-button settings-button--ghost"
                     :disabled="integrationSaving.strava"
                     @click="saveIntegrationCredentials('strava')"
                   >
@@ -587,6 +585,12 @@ type ToastHandle = {
   error: (message: string, description?: string) => void
   info: (message: string, description?: string) => void
   warning: (message: string, description?: string) => void
+  show?: (toast: {
+    type: 'success' | 'error' | 'info' | 'warning'
+    message: string
+    description?: string
+    action?: { label: string; handler: () => void }
+  }) => void
 }
 
 type CredentialService = 'spotify' | 'strava'
@@ -613,8 +617,10 @@ type IntegrationStatusResponse = {
 
 const toast = inject<Ref<ToastHandle | undefined>>('toast')
 
-function showToast(type: keyof ToastHandle, message: string, description?: string) {
-  toast?.value?.[type](message, description)
+type ToastMethod = Exclude<keyof ToastHandle, 'show'>
+
+function showToast(type: ToastMethod, message: string, description?: string) {
+  toast?.value?.[type]?.(message, description)
 }
 
 function getServiceLabel(service: IntegrationService): string {
@@ -1062,6 +1068,7 @@ async function saveOpenAIKey() {
     await window.electronAPI.setOpenAIKey(aiKeyInput.value.trim())
     aiKeyInput.value = ''
     await loadOpenAIKeyStatus()
+    await fetchSnapshot(true)
     showToast('success', 'OpenAI key saved securely')
   } catch (error) {
     console.error('Failed to save OpenAI key', error)
@@ -1076,6 +1083,7 @@ async function removeOpenAIKey() {
   try {
     await window.electronAPI.setOpenAIKey(null)
     await loadOpenAIKeyStatus()
+    await fetchSnapshot(true)
     showToast('info', 'OpenAI key removed')
   } catch (error) {
     console.error('Failed to remove OpenAI key', error)
@@ -1162,29 +1170,35 @@ async function saveSettingsPartial(partial: SettingsPatch) {
     throw new Error('Settings unavailable')
   }
 
-  const baseIntegrations: Settings['integrations'] = base.integrations ?? {
+  // Convert to plain objects to avoid structured clone errors across IPC
+  const basePlain = JSON.parse(JSON.stringify(base)) as Settings
+  const partialPlain = JSON.parse(JSON.stringify(partial)) as SettingsPatch
+
+  const baseIntegrations: Settings['integrations'] = basePlain.integrations ?? {
     spotify: { enabled: true },
     strava: { enabled: true },
     weather: { enabled: true },
   }
 
   const merged: Settings = {
-    ...base,
-    ...partial,
-    brightness: partial.brightness
-      ? { ...base.brightness, ...partial.brightness }
-      : base.brightness,
-    notifications: partial.notifications
-      ? { ...base.notifications, ...partial.notifications }
-      : base.notifications,
-    weather: partial.weather ? { ...base.weather, ...partial.weather } : base.weather,
-    ai: partial.ai ? { ...base.ai, ...partial.ai } : base.ai,
-    integrations: partial.integrations
+    ...basePlain,
+    ...partialPlain,
+    brightness: partialPlain.brightness
+      ? { ...basePlain.brightness, ...partialPlain.brightness }
+      : basePlain.brightness,
+    notifications: partialPlain.notifications
+      ? { ...basePlain.notifications, ...partialPlain.notifications }
+      : basePlain.notifications,
+    weather: partialPlain.weather
+      ? { ...basePlain.weather, ...partialPlain.weather }
+      : basePlain.weather,
+    ai: partialPlain.ai ? { ...basePlain.ai, ...partialPlain.ai } : basePlain.ai,
+    integrations: partialPlain.integrations
       ? (Object.keys(baseIntegrations) as Array<keyof Settings['integrations']>).reduce(
           (acc, key) => {
             acc[key] = {
               ...baseIntegrations[key],
-              ...(partial.integrations?.[key] ?? {}),
+              ...(partialPlain.integrations?.[key] ?? {}),
             }
             return acc
           },
@@ -1533,9 +1547,9 @@ onUnmounted(() => {
   padding: var(--space-md);
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(17, 25, 40, 0.65);
+  background: rgba(17, 25, 40, 0.6);
   box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.3),
+    0 10px 24px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -1547,6 +1561,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   gap: var(--space-md);
+  align-items: center;
 }
 
 .integration-card__eyebrow {
@@ -1603,10 +1618,10 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 6px 10px;
   border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
+  font-size: 12px;
+  font-weight: var(--font-semibold);
   border: 1px solid transparent;
 }
 

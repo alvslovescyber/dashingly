@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Music, Play, Pause, SkipBack, SkipForward } from 'lucide-vue-next'
 import fallbackAlbumArt from '@renderer/assets/spotify-placeholder.svg'
 
@@ -125,9 +125,13 @@ defineEmits<{
   manage: []
 }>()
 
+const displayProgressMs = ref(props.progressMs)
+const lastTick = ref<number | null>(null)
+let timer: ReturnType<typeof setInterval> | null = null
+
 const progressPercent = computed(() => {
   if (props.durationMs === 0) return 0
-  return (props.progressMs / props.durationMs) * 100
+  return (displayProgressMs.value / props.durationMs) * 100
 })
 
 const hasTrack = computed(() => Boolean(props.track))
@@ -154,6 +158,54 @@ function handleArtError(event: Event) {
   artSrc.value = fallbackAlbumArt
   ;(event.target as HTMLImageElement).src = fallbackAlbumArt
 }
+
+function stopTicker() {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+  lastTick.value = null
+}
+
+function startTicker() {
+  if (timer || !props.isPlaying || !props.durationMs) return
+  lastTick.value = Date.now()
+  timer = setInterval(() => {
+    if (!props.isPlaying) {
+      stopTicker()
+      return
+    }
+    if (!lastTick.value) {
+      lastTick.value = Date.now()
+      return
+    }
+    const now = Date.now()
+    const delta = now - lastTick.value
+    lastTick.value = now
+    const next = Math.min(props.durationMs, displayProgressMs.value + delta)
+    displayProgressMs.value = next
+    if (next >= props.durationMs) {
+      stopTicker()
+    }
+  }, 500)
+}
+
+// Sync display progress with incoming props
+watch(
+  () => [props.progressMs, props.durationMs, props.isPlaying],
+  () => {
+    displayProgressMs.value = props.progressMs
+    stopTicker()
+    if (props.isPlaying) {
+      startTicker()
+    }
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  stopTicker()
+})
 </script>
 
 <style scoped>
