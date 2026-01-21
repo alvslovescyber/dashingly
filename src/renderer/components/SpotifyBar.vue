@@ -1,43 +1,56 @@
 <template>
   <div v-if="isVisible" class="spotify-bar" @click="handleClick">
-    <div class="spotify-bar__art">
-      <img
-        v-if="artSrc"
-        :src="artSrc"
-        :alt="album || 'Album cover'"
-        class="spotify-bar__art-image"
-        @error="handleArtError"
-      />
-      <div v-else class="spotify-bar__art-placeholder">
-        <Music :size="28" :stroke-width="1.5" />
+    <template v-if="showUnavailable">
+      <div class="spotify-bar__empty">
+        <Music :size="40" />
+        <p class="spotify-bar__empty-title">Spotify unavailable</p>
+        <p class="spotify-bar__empty-copy">
+          Connect a Spotify Developer app to enable playback controls.
+        </p>
       </div>
-    </div>
-
-    <div class="spotify-bar__body">
-      <!-- Track Info + Controls -->
-      <div class="spotify-bar__row">
-        <div class="spotify-bar__info">
-          <span class="spotify-bar__label">Now Playing</span>
-          <p class="spotify-bar__track">{{ track || 'Not playing' }}</p>
-          <p class="spotify-bar__artist">{{ artist }}</p>
-        </div>
-
-        <div class="spotify-bar__controls">
-          <IconButton :icon="SkipBack" size="sm" variant="ghost" @click.stop="$emit('previous')" />
-          <button class="spotify-bar__play-btn" @click.stop="$emit('playPause')">
-            <component :is="isPlaying ? Pause : Play" :size="18" :stroke-width="2" />
-          </button>
-          <IconButton :icon="SkipForward" size="sm" variant="ghost" @click.stop="$emit('next')" />
+    </template>
+    <template v-else>
+      <div class="spotify-bar__art">
+        <img
+          v-if="artSrc"
+          :src="artSrc"
+          :alt="album || 'Album cover'"
+          class="spotify-bar__art-image"
+          @error="handleArtError"
+        />
+        <div v-else class="spotify-bar__art-placeholder">
+          <Music :size="28" :stroke-width="1.5" />
         </div>
       </div>
 
-      <!-- Progress -->
-      <div class="spotify-bar__progress">
-        <div class="spotify-bar__progress-bar">
-          <div class="spotify-bar__progress-fill" :style="{ width: `${progressPercent}%` }" />
+      <div class="spotify-bar__body">
+        <!-- Track Info + Controls -->
+        <div class="spotify-bar__row">
+          <div class="spotify-bar__info">
+            <span class="spotify-bar__label">Now Playing</span>
+            <p class="spotify-bar__track">
+              {{ hasTrack ? track : 'Nothing playing right now' }}
+            </p>
+            <p class="spotify-bar__artist">{{ hasTrack ? artist : 'Tap play on Spotify to begin' }}</p>
+          </div>
+
+          <div v-if="hasTrack" class="spotify-bar__controls">
+            <IconButton :icon="SkipBack" size="sm" variant="ghost" @click.stop="$emit('previous')" />
+            <button class="spotify-bar__play-btn" @click.stop="$emit('playPause')">
+              <component :is="isPlaying ? Pause : Play" :size="18" :stroke-width="2" />
+            </button>
+            <IconButton :icon="SkipForward" size="sm" variant="ghost" @click.stop="$emit('next')" />
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div v-if="hasTrack" class="spotify-bar__progress">
+          <div class="spotify-bar__progress-bar">
+            <div class="spotify-bar__progress-fill" :style="{ width: `${progressPercent}%` }" />
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -56,6 +69,7 @@ interface Props {
   albumArt?: string
   progressMs: number
   durationMs: number
+  connected: boolean
 }
 
 const props = defineProps<Props>()
@@ -81,6 +95,9 @@ const progressPercent = computed(() => {
   return (props.progressMs / props.durationMs) * 100
 })
 
+const hasTrack = computed(() => Boolean(props.track))
+const showUnavailable = computed(() => !props.connected)
+
 function handleClick() {
   // Show toast about Premium requirement
 }
@@ -95,8 +112,8 @@ function handleArtError(event: Event) {
 <style scoped>
 .spotify-bar {
   display: flex;
-  gap: var(--space-md);
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 8px 12px;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-tile);
@@ -112,9 +129,9 @@ function handleArtError(event: Event) {
 }
 
 .spotify-bar__art {
-  flex: 0 0 72px;
-  width: 72px;
-  height: 72px;
+  flex: 0 0 84px;
+  width: 84px;
+  height: 84px;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -159,6 +176,31 @@ function handleArtError(event: Event) {
 .spotify-bar__info {
   flex: 1;
   min-width: 0;
+}
+
+.spotify-bar__empty {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  text-align: center;
+  color: var(--text-secondary);
+  padding: var(--space-md) 0;
+}
+
+.spotify-bar__empty-title {
+  font-weight: var(--font-semibold);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.spotify-bar__empty-copy {
+  margin: 0;
+  max-width: 240px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
 }
 
 .spotify-bar__label {

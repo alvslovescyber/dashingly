@@ -1,5 +1,5 @@
 <template>
-  <div ref="chartContainer" class="mini-chart">
+  <div class="mini-chart">
     <canvas ref="canvas"></canvas>
   </div>
 </template>
@@ -48,7 +48,7 @@ const props = withDefaults(defineProps<Props>(), {
   smartScale: true,
 })
 
-const chartContainer = ref<HTMLElement>()
+
 const canvas = ref<HTMLCanvasElement>()
 let chart: Chart | null = null
 
@@ -111,7 +111,7 @@ function createChart() {
         },
       },
       layout: {
-        padding: { left: -8, right: -8, top: 10, bottom: 0 },
+        padding: { left: 0, right: 0, top: 10, bottom: 0 },
       },
       scales: {
         x: {
@@ -119,8 +119,19 @@ function createChart() {
           grid: { display: false },
         },
         y: {
-          display: false,
-          grid: { display: false },
+          display: true,
+          grid: {
+            display: true,
+            color: 'rgba(255, 255, 255, 0.1)',
+          },
+          ticks: {
+            display: true,
+            color: 'rgba(255, 255, 255, 0.5)',
+            font: { size: 10, family: 'Inter' },
+            maxTicksLimit: 5,
+            padding: 8,
+          },
+          border: { display: false },
           ...(props.smartScale
             ? {
                 grace: '10%', // Add 10% padding to top/bottom
@@ -161,8 +172,14 @@ function refreshChart() {
     return
   }
 
+  const dataset = chart.data.datasets[0]
+  if (!dataset) {
+    createChart()
+    return
+  }
+
   chart.data.labels = props.labels || props.data.map((_, i) => String(i))
-  chart.data.datasets[0].data = props.data
+  dataset.data = props.data
   chart.update()
 }
 

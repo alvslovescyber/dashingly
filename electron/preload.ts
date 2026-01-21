@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWeatherSettings: () => ipcRenderer.invoke('get-weather-settings'),
   setWeatherSettings: (settings: WeatherSettings) =>
     ipcRenderer.invoke('set-weather-settings', settings),
+  searchCities: (query: string) => ipcRenderer.invoke('search-cities', query),
 
   // Tasks
   getTasks: () => ipcRenderer.invoke('get-tasks'),
@@ -86,6 +87,7 @@ declare global {
       setSetting: (key: string, value: unknown) => Promise<void>
       getWeatherSettings: () => Promise<WeatherSettings>
       setWeatherSettings: (settings: WeatherSettings) => Promise<void>
+      searchCities: (query: string) => Promise<Array<{ name: string; latitude: number; longitude: number }>>
       getTasks: () => Promise<unknown[]>
       createTask: (task: unknown) => Promise<string>
       updateTask: (id: string, updates: unknown) => Promise<void>

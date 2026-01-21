@@ -77,23 +77,28 @@ watch(
   right: 0;
   bottom: 0;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9998;
+  padding: var(--space-md);
 }
 
 .modal-sheet {
   width: 100%;
   max-height: 85vh;
-  background: var(--glass-dark-medium);
-  backdrop-filter: blur(var(--blur-strong));
-  -webkit-backdrop-filter: blur(var(--blur-strong));
-  border: 1px solid var(--border-light);
-  border-bottom: none;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  /* Glassmorphic background */
+  background: rgba(18, 18, 22, 0.65);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 24px 48px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -170,7 +175,9 @@ watch(
 
 .modal-enter-active .modal-sheet,
 .modal-leave-active .modal-sheet {
-  transition: transform var(--duration-normal) var(--ease-out);
+  transition:
+    transform var(--duration-normal) cubic-bezier(0.16, 1, 0.3, 1),
+    opacity var(--duration-normal) var(--ease-default);
 }
 
 .modal-enter-from,
@@ -180,6 +187,7 @@ watch(
 
 .modal-enter-from .modal-sheet,
 .modal-leave-to .modal-sheet {
-  transform: translateY(100%);
+  opacity: 0;
+  transform: scale(0.96) translateY(10px);
 }
 </style>

@@ -13,6 +13,7 @@ interface GeocodeResult {
   latitude: number
   longitude: number
   name: string
+  country?: string
 }
 
 interface RawWeatherResponse {
@@ -45,6 +46,67 @@ export function getWeatherSettings(): WeatherSettings {
 
 export function saveWeatherSettings(settings: WeatherSettings): void {
   setSetting(WEATHER_SETTINGS_KEY, settings)
+}
+
+function normalizeCityQuery(city: string): string {
+  return city.replace(/[,_]+/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function tokenizeQuery(city: string): string[] {
+  const tokens = normalizeCityQuery(city).toLowerCase().split(' ').filter(Boolean)
+  return Array.from(new Set(tokens))
+}
+
+function scoreCandidate(
+  candidate: string,
+  country: string | undefined,
+  tokens: string[],
+  normalizedQuery: string
+): number {
+  const candidateStr = candidate.toLowerCase()
+  const countryStr = country?.toLowerCase() ?? ''
+  let score = 0
+
+  for (const token of tokens) {
+    if (candidateStr.includes(token)) {
+      score += token.length * 2
+    } else if (countryStr.includes(token)) {
+      score += token.length
+    }
+  }
+
+  if (countryStr && normalizedQuery.includes(countryStr)) {
+    score += 10
+  }
+
+  return score
+}
+
+function pickBestLocation<T>(
+  entries: T[],
+  getName: (entry: T) => string,
+  getCountry: (entry: T) => string | undefined,
+  tokens: string[],
+  normalizedQuery: string
+): T | null {
+  let best: T | null = null
+  let bestScore = -Infinity
+
+  for (const entry of entries) {
+    const name = getName(entry)
+    const country = getCountry(entry)
+    const score = scoreCandidate(name, country, tokens, normalizedQuery)
+    if (score > bestScore) {
+      bestScore = score
+      best = entry
+    }
+  }
+
+  return best
+}
+
+function buildDisplayName(parts: Array<string | undefined>): string {
+  return parts.filter(Boolean).join(', ')
 }
 
 function mapWeatherCodeToCondition(code: number): { label: string; icon: string } {
@@ -127,9 +189,15 @@ function writeCache(cacheKey: string, status: WeatherStatus): void {
 async function geocodeCity(city: string): Promise<GeocodeResult | null> {
   if (!city) return null
 
+  const normalized = normalizeCityQuery(city)
+  if (!normalized) return null
+
+  const normalizedLower = normalized.toLowerCase()
+  const tokens = tokenizeQuery(city)
+
   const url = new URL('https://geocoding-api.open-meteo.com/v1/search')
-  url.searchParams.set('name', city)
-  url.searchParams.set('count', '1')
+  url.searchParams.set('name', normalized)
+  url.searchParams.set('count', '5')
   url.searchParams.set('language', 'en')
   url.searchParams.set('format', 'json')
 
@@ -140,16 +208,89 @@ async function geocodeCity(city: string): Promise<GeocodeResult | null> {
   }
 
   const json = (await response.json()) as {
-    results?: Array<{ name: string; country?: string; latitude: number; longitude: number }>
+    results?: Array<{
+      name: string
+      admin1?: string
+      country?: string
+      latitude: number
+      longitude: number
+    }>
   }
-  const result = json.results?.[0]
-  if (!result) return null
 
-  const name = result.country ? `${result.name}, ${result.country}` : result.name
-  return {
-    latitude: result.latitude,
-    longitude: result.longitude,
-    name,
+  const primaryResults: GeocodeResult[] =
+    json.results?.map(r => ({
+      name: buildDisplayName([r.name, r.admin1, r.country]),
+      latitude: r.latitude,
+      longitude: r.longitude,
+      country: r.country,
+    })) ?? []
+
+  let result: GeocodeResult | null =
+    pickBestLocation(
+      primaryResults,
+      entry => entry.name,
+      entry => entry.country,
+      tokens,
+      normalizedLower
+    ) ?? null
+
+  if (!result) {
+    let fallback = await searchCities(normalized)
+
+    if (!fallback.length && normalized.includes(' ')) {
+      const [firstWord] = normalized.split(' ')
+      if (firstWord && firstWord.length >= 2) {
+        fallback = await searchCities(firstWord)
+      }
+    }
+
+    result =
+      pickBestLocation(
+        fallback,
+        entry => entry.name,
+        entry => entry.country,
+        tokens,
+        normalizedLower
+      ) ?? null
+  }
+
+  return result
+}
+
+export async function searchCities(query: string): Promise<GeocodeResult[]> {
+  if (!query || query.length < 2) return []
+
+  const url = new URL('https://geocoding-api.open-meteo.com/v1/search')
+  url.searchParams.set('name', query)
+  url.searchParams.set('count', '5')
+  url.searchParams.set('language', 'en')
+  url.searchParams.set('format', 'json')
+
+  try {
+    const response = await fetch(url.toString())
+    if (!response.ok) return []
+
+    const json = (await response.json()) as {
+      results?: Array<{
+        name: string
+        country?: string
+        admin1?: string
+        latitude: number
+        longitude: number
+      }>
+    }
+
+    if (!json.results) return []
+
+    return json.results.map(r => ({
+      name: buildDisplayName([r.name, r.admin1, r.country]),
+      latitude: r.latitude,
+      longitude: r.longitude,
+      country: r.country,
+    }))
+  } catch (error) {
+    console.error('City search failed:', error)
+    return []
   }
 }
 

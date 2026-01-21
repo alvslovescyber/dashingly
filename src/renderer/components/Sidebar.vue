@@ -41,7 +41,6 @@ import {
   LayoutDashboard,
   Home,
   ListChecks,
-  Activity,
   Heart,
   BookOpen,
   Music,
@@ -60,10 +59,9 @@ defineEmits<{
 
 const navItems = [
   { id: 'home', icon: Home, label: 'Home' },
-  { id: 'tasks', icon: ListChecks, label: 'Tasks' },
-  { id: 'activity', icon: Activity, label: 'Activity' },
   { id: 'health', icon: Heart, label: 'Health' },
-  { id: 'bible', icon: BookOpen, label: 'Bible' },
+  { id: 'tasks', icon: ListChecks, label: 'Tasks' },
+  { id: 'reading', icon: BookOpen, label: 'Reading' },
   { id: 'music', icon: Music, label: 'Music' },
 ]
 </script>

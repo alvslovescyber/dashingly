@@ -18,7 +18,14 @@
     <!-- Right: Actions -->
     <div class="top-bar__right">
       <IconButton :icon="Mic" size="md" variant="ghost" />
-      <IconButton :icon="Settings" size="md" variant="ghost" @click="$emit('openSettings')" />
+      <IconButton
+        :icon="focusMode ? Sun : Moon"
+        size="md"
+        variant="ghost"
+        :class="{ 'top-bar__button--active': focusMode }"
+        @click="$emit('toggleFocus')"
+      />
+
       <div class="top-bar__avatar">
         <User :size="18" :stroke-width="1.75" />
       </div>
@@ -27,17 +34,21 @@
 </template>
 
 <script setup lang="ts">
-import { Search, Mic, Settings, User } from 'lucide-vue-next'
+import { Search, Mic, User, Moon, Sun } from 'lucide-vue-next'
 import IconButton from './IconButton.vue'
 
 interface Props {
   displayName: string
+  focusMode?: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  focusMode: false,
+})
 
 defineEmits<{
   openSettings: []
+  toggleFocus: []
 }>()
 </script>
 
@@ -108,6 +119,10 @@ defineEmits<{
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.top-bar__button--active {
+  color: var(--color-blue-light);
 }
 
 .top-bar__avatar {

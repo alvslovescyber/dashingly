@@ -71,10 +71,11 @@ export function useDashboard() {
   const todayTasks = computed(() => {
     const completionMap = new Set(taskCompletions.value.map(c => c.taskId))
     return tasks.value
-      .filter(t => t.type === 'daily' && t.isActive)
+      .filter(t => t.isActive)
       .map(t => ({
         id: t.id,
         title: t.title,
+        type: t.type,
         completed: completionMap.has(t.id),
       }))
   })
@@ -112,6 +113,7 @@ export function useDashboard() {
     calories: health.value?.calories ?? 0,
     caloriesPercent: health.value?.caloriesPercent ?? 0,
     sleepMinutes: health.value?.sleepMinutes ?? 0,
+    warningDays: health.value?.warningDays,
   }))
 
   // Spotify
@@ -198,6 +200,15 @@ export function useDashboard() {
     }
   }
 
+  async function deleteTask(taskId: string): Promise<void> {
+    try {
+      await window.electronAPI.deleteTask(taskId)
+      await fetchSnapshot(true)
+    } catch (e) {
+      console.error('Failed to delete task:', e)
+    }
+  }
+
   return {
     // State
     loading,
@@ -244,6 +255,7 @@ export function useDashboard() {
     fetchSnapshot,
     completeTask,
     createTask,
+    deleteTask,
     acceptSuggestion,
     dismissSuggestion,
     markBibleComplete,

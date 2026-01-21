@@ -36,7 +36,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   const weatherSettings = getWeatherSettings()
   const settings: Settings = {
     ...storedSettings,
-    weather: storedSettings.weather ?? weatherSettings,
+    weather: weatherSettings,
   }
 
   // Tasks

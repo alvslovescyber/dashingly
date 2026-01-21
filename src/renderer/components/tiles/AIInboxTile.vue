@@ -38,8 +38,9 @@
 
       <!-- Empty State -->
       <div v-else class="ai-inbox-empty">
-        <Clock :size="20" class="ai-inbox-empty__icon" />
-        <span class="ai-inbox-empty__text">Next suggestions at {{ nextSuggestionTime }}</span>
+        <Clock :size="24" class="ai-inbox-empty__icon" />
+        <span class="ai-inbox-empty__title">No suggestions right now</span>
+        <span class="ai-inbox-empty__text">Next check at {{ nextSuggestionTime }}</span>
       </div>
     </div>
   </TileCard>
@@ -233,8 +234,14 @@ function handleViewAll() {
   color: var(--text-muted);
 }
 
-.ai-inbox-empty__text {
+.ai-inbox-empty__title {
   font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+}
+
+.ai-inbox-empty__text {
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
   text-align: center;
 }

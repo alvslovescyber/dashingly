@@ -19,6 +19,7 @@ import {
   getWeatherSettings,
   saveWeatherSettings,
   getWeatherStatus,
+  searchCities,
 } from '../src/main/integrations/weather'
 import type { WeatherSettings } from '../src/shared/types'
 
@@ -156,6 +157,10 @@ function setupIPC() {
   ipcMain.handle('set-weather-settings', async (_event, settings: WeatherSettings) => {
     saveWeatherSettings(settings)
     await getWeatherStatus() // refresh cache for new location
+  })
+
+  ipcMain.handle('search-cities', async (_event, query: string) => {
+    return searchCities(query)
   })
 
   // Task actions

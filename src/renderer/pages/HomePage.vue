@@ -6,7 +6,12 @@
     <!-- Main Content -->
     <div class="home-page__main">
       <!-- Top Bar -->
-      <TopBar :display-name="displayName" @open-settings="showSettings = true">
+      <TopBar
+        :display-name="displayName"
+        :focus-mode="focusMode"
+        @toggle-focus="toggleFocusMode"
+        @open-settings="showSettings = true"
+      >
         <!-- Page Indicator Dots -->
         <template #center>
           <div class="page-dots">
@@ -21,8 +26,46 @@
         </template>
       </TopBar>
 
+      <!-- Focus Mode -->
+      <div v-if="focusMode" class="focus-mode">
+        <p class="focus-mode__label">Focus mode</p>
+        <p class="focus-mode__time">{{ focusClock }}</p>
+        <p class="focus-mode__date">{{ focusDate }}</p>
+        <div class="focus-mode__grid">
+          <TileCard title="Today's Tasks" :interactive="false">
+            <div v-if="pendingToday.length" class="focus-mode__list">
+              <div v-for="task in pendingToday" :key="task.id" class="focus-mode__list-item">
+                <button class="task-checkbox" @click="toggleTask(task.id)">
+                  <Check v-if="task.completed" :size="12" />
+                </button>
+                <span>{{ task.title }}</span>
+              </div>
+            </div>
+            <p v-else class="focus-mode__empty">All tasks complete</p>
+          </TileCard>
+          <TileCard title="Weekly Running" :interactive="false">
+            <p class="focus-mode__stat">{{ stravaData.weeklyDistance }} km</p>
+            <p class="focus-mode__hint">/{{ stravaData.weeklyTarget }} km target</p>
+            <MiniChart
+              :data="stravaData.weekData"
+              :labels="['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+              color="#14B8A6"
+              gradient-start="rgba(20, 184, 166, 0.12)"
+              gradient-end="rgba(20, 184, 166, 0)"
+              :show-points="true"
+            />
+          </TileCard>
+          <TileCard title="Weather" :interactive="false">
+            <p class="focus-mode__stat">{{ formatTemperature(weatherData.temperature) }}</p>
+            <p class="focus-mode__hint">{{ weatherData.condition }}</p>
+            <p class="focus-mode__hint">Updated {{ weatherUpdatedLabel }}</p>
+          </TileCard>
+        </div>
+      </div>
+
       <!-- Swipeable Content Area -->
       <div
+        v-else
         ref="swipeContainer"
         class="home-page__content"
         @touchstart="handleTouchStart"
@@ -40,6 +83,7 @@
             <div class="home-page__row home-page__row--top">
               <!-- Spotify Now Playing -->
               <SpotifyBar
+                v-if="spotifyData.connected"
                 :is-visible="shouldShowSpotify"
                 :is-playing="spotifyData.isPlaying"
                 :track="spotifyData.track"
@@ -48,7 +92,16 @@
                 :album-art="spotifyData.albumArt"
                 :progress-ms="spotifyData.progressMs"
                 :duration-ms="spotifyData.durationMs"
+                :connected="spotifyData.connected"
                 class="tile--spotify"
+              />
+              <DaySummaryTile
+                v-else
+                class="tile--spotify"
+                :tasks-completed="tasksCompleted"
+                :total-tasks="totalTasks"
+                :weekly-distance="weeklyDistanceDisplay"
+                :weather-summary="daySummaryWeather"
               />
 
               <!-- AI Inbox Tile -->
@@ -84,6 +137,7 @@
                     gradient-start="rgba(20, 184, 166, 0.12)"
                     gradient-end="rgba(20, 184, 166, 0)"
                     :height="80"
+                    :show-points="true"
                   />
                 </div>
               </TileCard>
@@ -105,6 +159,14 @@
                       <Check v-if="task.completed" :size="12" />
                     </div>
                     <span class="task-title">{{ task.title }}</span>
+                    <button
+                      v-if="task.completed"
+                      class="task-delete"
+                      type="button"
+                      @click.stop="handleTaskDelete(task.id)"
+                    >
+                      <Trash2 :size="14" />
+                    </button>
                   </div>
                   <button class="task-add" type="button" @click.stop="showAddTaskModal = true">
                     <Plus :size="14" />
@@ -195,17 +257,17 @@
                     </button>
                   </div>
                 </template>
-                <MiniChart
-                  :data="energyChart.data"
-                  :labels="energyChart.labels"
-                  :height="100"
-                />
+                <MiniChart :data="energyChart.data" :labels="energyChart.labels" :height="100" />
               </TileCard>
 
               <!-- Weather Tile -->
               <TileCard class="tile--weather" size="md" :interactive="false">
                 <template #headerRight>
-                  <button class="weather-settings-btn" type="button" @click.stop="showSettings = true">
+                  <button
+                    class="weather-settings-btn"
+                    type="button"
+                    @click.stop="showSettings = true"
+                  >
                     <SettingsIcon :size="16" />
                   </button>
                 </template>
@@ -263,7 +325,10 @@
                     <p class="health-meta__value">{{ healthData.sleepMinutes }}</p>
                   </div>
                 </div>
-                <div class="health-sync" :class="{ 'health-sync--warning': healthData.warningDays }">
+                <div
+                  class="health-sync"
+                  :class="{ 'health-sync--warning': healthData.warningDays }"
+                >
                   <span>Last synced {{ healthSyncLabel }}</span>
                   <span v-if="healthData.warningDays">Reconnect Health source</span>
                 </div>
@@ -298,27 +363,101 @@
             </div>
           </div>
 
-          <!-- Section: Strava (placeholder) -->
-          <div class="home-page__section home-page__section--placeholder">
-            <div class="placeholder-content">
-              <Activity :size="48" />
-              <span>Strava Section</span>
+          <!-- Section: Tasks -->
+          <div class="home-page__section home-page__section--tasks">
+            <div class="tasks-page">
+              <div class="tasks-page__column">
+                <div class="tasks-page__header">
+                  <h3>Today</h3>
+                  <span>{{ tasksCompleted }}/{{ totalTasks }}</span>
+                </div>
+                <div v-if="pendingToday.length" class="tasks-page__list">
+                  <button
+                    v-for="task in pendingToday"
+                    :key="task.id"
+                    class="tasks-page__item"
+                    @click="toggleTask(task.id)"
+                  >
+                    <span>{{ task.title }}</span>
+                    <span class="tasks-page__item-action">Mark done</span>
+                  </button>
+                </div>
+                <p v-else class="tasks-page__empty">You're all set for today 🎉</p>
+              </div>
+
+              <div class="tasks-page__column">
+                <div class="tasks-page__header">
+                  <h3>One-off</h3>
+                  <button class="tasks-page__add" @click="showAddTaskModal = true">
+                    <Plus :size="14" /> New
+                  </button>
+                </div>
+                <div v-if="oneOffTasks.length" class="tasks-page__list">
+                  <div v-for="task in oneOffTasks" :key="task.id" class="tasks-page__item tasks-page__item--static">
+                    <span>{{ task.title }}</span>
+                  </div>
+                </div>
+                <p v-else class="tasks-page__empty">No upcoming tasks</p>
+              </div>
+
+              <div class="tasks-page__column">
+                <div class="tasks-page__header">
+                  <h3>Completed</h3>
+                  <span>{{ completedToday.length }}</span>
+                </div>
+                <div v-if="completedToday.length" class="tasks-page__list">
+                  <div
+                    v-for="task in completedToday"
+                    :key="task.id"
+                    class="tasks-page__item tasks-page__item--complete"
+                  >
+                    <Check :size="14" />
+                    <span>{{ task.title }}</span>
+                    <button class="tasks-page__delete" @click.stop="handleTaskDelete(task.id)">
+                      <Trash2 :size="14" />
+                    </button>
+                  </div>
+                </div>
+                <p v-else class="tasks-page__empty">Nothing completed yet</p>
+              </div>
             </div>
           </div>
 
-          <!-- Section: Tasks (placeholder) -->
-          <div class="home-page__section home-page__section--placeholder">
-            <div class="placeholder-content">
-              <ListChecks :size="48" />
-              <span>Tasks Section</span>
+          <!-- Section: Reading -->
+          <div class="home-page__section home-page__section--reading">
+            <div class="reading-page">
+              <TileCard title="Daily Reading" :icon="BookOpen" :interactive="false">
+                <p class="reading-page__reference">{{ currentReference }}</p>
+                <p class="reading-page__text">
+                  “{{ verseMain }}
+                  <span v-if="verseRest">{{ verseRest }}</span>
+                  ”
+                </p>
+                <div class="reading-page__actions">
+                  <button class="bible-button" :class="{ 'bible-button--done': isBibleCompleted }" @click="handleBibleAction">
+                    {{ isBibleCompleted ? 'Completed today' : 'Mark Done' }}
+                  </button>
+                </div>
+              </TileCard>
+              <div class="reading-page__progress">
+                <p class="reading-page__label">Plan progress</p>
+                <div class="reading-page__progress-bar">
+                  <div class="reading-page__progress-fill" :style="{ width: `${(bibleData.dayIndex % 365) / 3.65}%` }" />
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Section: Reading (placeholder) -->
-          <div class="home-page__section home-page__section--placeholder">
-            <div class="placeholder-content">
-              <BookOpen :size="48" />
-              <span>Reading Section</span>
+          <!-- Section: Music -->
+          <div class="home-page__section home-page__section--music">
+            <div class="music-page">
+              <TileCard title="Spotify" :icon="Music" :interactive="false">
+                <p class="music-page__title">Developer access pending</p>
+                <p class="music-page__copy">
+                  Focus on tasks, health, and reading while Spotify integration is offline. Add your own
+                  tracks once Spotify Developer credentials are restored.
+                </p>
+              </TileCard>
             </div>
           </div>
         </div>
@@ -326,7 +465,7 @@
     </div>
 
     <!-- Add Task Modal -->
-    <ModalSheet v-model="showAddTaskModal" title="Add Task">
+    <ModalSheet v-model="showAddTaskModal" title="Add Task" size="sm">
       <form class="task-form" @submit.prevent="submitTask">
         <label class="form-label">
           Title
@@ -383,6 +522,14 @@
             <Check v-if="task.completed" :size="12" />
           </div>
           <span class="task-title">{{ task.title }}</span>
+          <button
+            v-if="task.completed"
+            class="task-delete"
+            type="button"
+            @click.stop="handleTaskDelete(task.id)"
+          >
+            <Trash2 :size="14" />
+          </button>
         </div>
       </div>
     </ModalSheet>
@@ -405,13 +552,23 @@
     </ModalSheet>
 
     <!-- Settings Modal -->
-    <ModalSheet v-model="showSettings" title="Weather Settings" size="md">
+    <ModalSheet v-model="showSettings" title="Settings" size="sm">
       <div class="settings-section">
-        <span class="form-label">Location Mode</span>
+        <label class="form-label">
+          Display Name
+          <input
+            v-model="settingsForm.displayName"
+            class="form-input"
+            type="text"
+            placeholder="Your Name"
+          />
+        </label>
+
+        <span class="form-label">Weather Location Mode</span>
         <div class="settings-radio-group">
           <label>
             <input
-              v-model="weatherForm.locationMode"
+              v-model="settingsForm.locationMode"
               type="radio"
               value="city"
               name="locationMode"
@@ -420,7 +577,7 @@
           </label>
           <label>
             <input
-              v-model="weatherForm.locationMode"
+              v-model="settingsForm.locationMode"
               type="radio"
               value="latlon"
               name="locationMode"
@@ -429,21 +586,35 @@
           </label>
         </div>
 
-        <label v-if="weatherForm.locationMode === 'city'" class="form-label">
+        <label v-if="settingsForm.locationMode === 'city'" class="form-label city-search-container">
           City
-          <input
-            v-model="weatherForm.cityName"
-            class="form-input"
-            type="text"
-            placeholder="Chicago"
-          />
+          <div class="input-wrapper">
+            <input
+              v-model="settingsForm.cityName"
+              class="form-input"
+              type="text"
+              placeholder="Chicago"
+              @input="handleCityInput"
+            />
+            <div v-if="showCitySuggestions" class="city-suggestions">
+              <button
+                v-for="(city, index) in citySuggestions"
+                :key="index"
+                class="city-suggestion-item"
+                @click="selectCity(city)"
+              >
+                {{ city.name }}
+              </button>
+            </div>
+            <div v-if="searchingCity" class="input-spinner"></div>
+          </div>
         </label>
 
         <div v-else class="coordinates-grid">
           <label class="form-label">
             Latitude
             <input
-              v-model.number="weatherForm.latitude"
+              v-model.number="settingsForm.latitude"
               class="form-input"
               type="number"
               step="0.01"
@@ -453,7 +624,7 @@
           <label class="form-label">
             Longitude
             <input
-              v-model.number="weatherForm.longitude"
+              v-model.number="settingsForm.longitude"
               class="form-input"
               type="number"
               step="0.01"
@@ -462,11 +633,25 @@
           </label>
         </div>
 
-        <p v-if="loadingWeatherSettings" class="settings-note">Loading current settings...</p>
-        <p v-if="weatherSettingsError" class="form-error">{{ weatherSettingsError }}</p>
+        <label class="form-label">
+          Units
+          <div class="settings-radio-group settings-radio-group--compact">
+            <label>
+              <input v-model="settingsForm.units" type="radio" value="metric" name="units" />
+              Celsius
+            </label>
+            <label>
+              <input v-model="settingsForm.units" type="radio" value="imperial" name="units" />
+              Fahrenheit
+            </label>
+          </div>
+        </label>
 
-        <button class="form-submit" type="button" :disabled="savingWeatherSettings" @click="saveWeatherSettings">
-          {{ savingWeatherSettings ? 'Saving...' : 'Save Settings' }}
+        <p v-if="loadingSettings" class="settings-note">Loading current settings...</p>
+        <p v-if="settingsError" class="form-error">{{ settingsError }}</p>
+
+        <button class="form-submit" type="button" :disabled="savingSettings" @click="saveSettings">
+          {{ savingSettings ? 'Saving...' : 'Save Settings' }}
         </button>
       </div>
     </ModalSheet>
@@ -474,7 +659,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   Activity,
   ListChecks,
@@ -491,7 +676,9 @@ import {
   CloudSnow,
   CloudLightning,
   CloudFog,
+  Trash2,
   Settings as SettingsIcon,
+  Music,
 } from 'lucide-vue-next'
 import {
   Sidebar,
@@ -507,10 +694,13 @@ import AIInboxTile from '../components/tiles/AIInboxTile.vue'
 import { useDashboard } from '../composables/useDashboard'
 import { useVerseOfDay } from '../composables/useVerseOfDay'
 import type { WeatherSettings } from '@shared/types'
+import DaySummaryTile from '../components/DaySummaryTile.vue'
+
 
 // Dashboard data from main process
 const {
   displayName,
+  tasks,
   todayTasks,
   tasksCompleted,
   totalTasks,
@@ -526,6 +716,7 @@ const {
   dismissSuggestion,
   markBibleComplete,
   createTask,
+  deleteTask: deleteTaskAction,
   fetchSnapshot,
 } = useDashboard()
 
@@ -533,9 +724,9 @@ const {
 const sections = [
   { id: 'home', label: 'Home' },
   { id: 'health', label: 'Health' },
-  { id: 'strava', label: 'Strava' },
   { id: 'tasks', label: 'Tasks' },
   { id: 'reading', label: 'Reading' },
+  { id: 'music', label: 'Music' },
 ]
 
 const currentSectionIndex = ref(0)
@@ -603,13 +794,44 @@ function handleAIDismiss(id: string) {
   dismissSuggestion(id)
 }
 
+function toggleFocusMode() {
+  focusMode.value = !focusMode.value
+}
+
 const shouldShowSpotify = computed(
-  () => spotifyData.value.isPlaying && Boolean(spotifyData.value.track)
+  () => spotifyData.value.connected || Boolean(spotifyData.value.track)
 )
+
+const pendingToday = computed(() => todayTasks.value.filter(task => !task.completed))
+const completedToday = computed(() => todayTasks.value.filter(task => task.completed))
+const oneOffTasks = computed(() =>
+  tasks.value.filter(task => task.type === 'oneoff' && task.isActive)
+)
+
+const daySummaryWeather = computed(() => {
+  if (weatherData.value.temperature !== null && weatherData.value.condition) {
+    return `${formatTemperature(weatherData.value.temperature)} • ${weatherData.value.condition}`
+  }
+  return weatherData.value.condition ?? '—'
+})
+
+const weeklyDistanceDisplay = computed(() =>
+  stravaData.value.weeklyDistance ? Number(stravaData.value.weeklyDistance).toFixed(1) : '0'
+)
+
+
 
 // Task toggle handler
 function toggleTask(id: string) {
   completeTask(id)
+}
+
+async function handleTaskDelete(id: string) {
+  try {
+    await deleteTaskAction(id)
+  } catch (error) {
+    console.error('Failed to delete task', error)
+  }
 }
 
 const TASK_TILE_LIMIT = 5
@@ -655,6 +877,36 @@ async function submitTask() {
 }
 
 const pendingAISuggestions = computed(() => aiSuggestions.value)
+const focusMode = ref(false)
+const focusNow = ref(new Date())
+let focusTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  focusTimer = setInterval(() => {
+    focusNow.value = new Date()
+  }, 60 * 1000)
+})
+
+onUnmounted(() => {
+  if (focusTimer) {
+    clearInterval(focusTimer)
+  }
+})
+
+const focusClock = computed(() =>
+  new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(focusNow.value)
+)
+
+const focusDate = computed(() =>
+  new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(focusNow.value)
+)
 
 // Daily Reading - Verse of the Day (from local JSON for now, syncced with DB status)
 const verseData = useVerseOfDay()
@@ -709,7 +961,12 @@ const weatherIconMap = {
   fog: CloudFog,
 } as const
 
-const weatherIcon = computed(() => weatherIconMap[weatherData.value.icon] ?? CloudSun)
+type WeatherIconKey = keyof typeof weatherIconMap
+
+const weatherIcon = computed(() => {
+  const key = (weatherData.value.icon ?? 'cloud') as WeatherIconKey
+  return weatherIconMap[key] ?? CloudSun
+})
 
 const fallbackForecast = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => ({
   day,
@@ -741,71 +998,139 @@ function formatRelativeTime(timestamp?: number | null): string {
 
 const weatherUpdatedLabel = computed(() => formatRelativeTime(weatherData.value.lastUpdated))
 
-// Weather settings form
-const weatherForm = ref<WeatherSettings>({
+// Settings form (Weather + General)
+const settingsForm = ref({
+  displayName: '',
   locationMode: 'city',
   cityName: 'New York',
+  latitude: undefined as number | undefined,
+  longitude: undefined as number | undefined,
   units: 'metric',
 })
-const loadingWeatherSettings = ref(false)
-const savingWeatherSettings = ref(false)
-const weatherSettingsError = ref<string | null>(null)
+const loadingSettings = ref(false)
+const savingSettings = ref(false)
+const settingsError = ref<string | null>(null)
+const citySuggestions = ref<Array<{ name: string; latitude: number; longitude: number }>>([])
+const searchingCity = ref(false)
+const showCitySuggestions = ref(false)
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
+function handleCityInput(e: Event) {
+  const query = (e.target as HTMLInputElement).value
+
+  if (searchTimeout) clearTimeout(searchTimeout)
+
+  if (!query || query.length < 2) {
+    citySuggestions.value = []
+    showCitySuggestions.value = false
+    return
+  }
+
+  searchingCity.value = true
+  // Debounce search
+  searchTimeout = setTimeout(async () => {
+    try {
+      const results = await window.electronAPI.searchCities(query)
+      citySuggestions.value = results
+      showCitySuggestions.value = results.length > 0
+    } catch (err) {
+      console.error('Search failed', err)
+    } finally {
+      searchingCity.value = false
+    }
+  }, 500)
+}
+
+function selectCity(city: { name: string; latitude: number; longitude: number }) {
+  settingsForm.value.cityName = city.name
+  settingsForm.value.latitude = city.latitude
+  settingsForm.value.longitude = city.longitude
+
+  showCitySuggestions.value = false
+  citySuggestions.value = []
+}
+
+// Close suggestions on click outside
 watch(showSettings, value => {
   if (value) {
-    loadWeatherSettings()
+    loadSettings()
+    // Reset suggestion state
+    citySuggestions.value = []
+    showCitySuggestions.value = false
   }
 })
 
-async function loadWeatherSettings() {
-  loadingWeatherSettings.value = true
-  weatherSettingsError.value = null
+async function loadSettings() {
+  loadingSettings.value = true
+  settingsError.value = null
   try {
-    const settings = (await window.electronAPI.getWeatherSettings()) as WeatherSettings
-    weatherForm.value = { ...settings }
+    const [weatherSettings, currentName] = await Promise.all([
+      window.electronAPI.getWeatherSettings(),
+      window.electronAPI.getSetting('displayName'),
+    ])
+
+    settingsForm.value = {
+      locationMode: weatherSettings.locationMode,
+      cityName: weatherSettings.cityName || '',
+      latitude: weatherSettings.latitude,
+      longitude: weatherSettings.longitude,
+      units: weatherSettings.units,
+      displayName: (currentName as string) || 'Alvaro',
+    }
   } catch (error) {
-    console.error('Failed to load weather settings', error)
-    weatherSettingsError.value = 'Unable to load settings.'
+    console.error('Failed to load settings', error)
+    settingsError.value = 'Unable to load settings.'
   } finally {
-    loadingWeatherSettings.value = false
+    loadingSettings.value = false
   }
 }
 
-async function saveWeatherSettings() {
-  weatherSettingsError.value = null
+async function saveSettings() {
+  settingsError.value = null
 
-  if (weatherForm.value.locationMode === 'city' && !weatherForm.value.cityName?.trim()) {
-    weatherSettingsError.value = 'Enter a city name.'
+  if (settingsForm.value.locationMode === 'city' && !settingsForm.value.cityName?.trim()) {
+    settingsError.value = 'Enter a city name.'
     return
   }
 
   if (
-    weatherForm.value.locationMode === 'latlon' &&
-    (weatherForm.value.latitude === undefined || weatherForm.value.longitude === undefined)
+    settingsForm.value.locationMode === 'latlon' &&
+    (settingsForm.value.latitude === undefined || settingsForm.value.longitude === undefined)
   ) {
-    weatherSettingsError.value = 'Provide both latitude and longitude.'
+    settingsError.value = 'Provide both latitude and longitude.'
     return
   }
 
-  savingWeatherSettings.value = true
+  savingSettings.value = true
   try {
-    await window.electronAPI.setWeatherSettings(weatherForm.value)
+    // Save Display Name
+    await window.electronAPI.setSetting('displayName', settingsForm.value.displayName)
+
+    // Save Weather Settings
+    // Convert reactive object to plain object for IPC serialization and strip extra fields
+    const weatherPayload: WeatherSettings = {
+      locationMode: settingsForm.value.locationMode as 'city' | 'latlon',
+      cityName: settingsForm.value.cityName || '',
+      latitude: settingsForm.value.latitude,
+      longitude: settingsForm.value.longitude,
+      units: settingsForm.value.units as 'metric' | 'imperial',
+    }
+
+    await window.electronAPI.setWeatherSettings(weatherPayload)
     await fetchSnapshot(true)
     showSettings.value = false
   } catch (error) {
-    console.error('Failed to save weather settings', error)
-    weatherSettingsError.value = 'Failed to save settings.'
+    console.error('Failed to save settings', error)
+    settingsError.value = 'Failed to save settings.'
   } finally {
-    savingWeatherSettings.value = false
+    savingSettings.value = false
   }
 }
 
 // Health helpers
 const healthTrend = computed(() => {
   const base = Math.max(2500, healthData.value.steps - 2000)
-  return Array.from({ length: 7 }, (_, index) =>
-    Math.round(base + Math.sin(index / 2) * 600)
-  )
+  return Array.from({ length: 7 }, (_, index) => Math.round(base + Math.sin(index / 2) * 600))
 })
 const sleepTrend = [420, 460, 410, 440, 400, 450, 430]
 const healthSyncLabel = computed(() => formatRelativeTime(lastSync.value.health))
@@ -905,7 +1230,7 @@ const latestSleepMinutes = computed(() => {
 
 /* Top Row */
 .home-page__row--top {
-  min-height: 140px;
+  min-height: 220px;
 }
 
 .tile--spotify {
@@ -975,6 +1300,7 @@ const latestSleepMinutes = computed(() => {
 .task-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: var(--space-sm);
   padding: var(--space-sm);
   background: rgba(255, 255, 255, 0.04);
@@ -1016,6 +1342,7 @@ const latestSleepMinutes = computed(() => {
 .task-title {
   font-size: var(--text-sm);
   color: var(--text-primary);
+  flex: 1;
 }
 
 .task-add {
@@ -1036,6 +1363,25 @@ const latestSleepMinutes = computed(() => {
 
 .task-add:hover {
   background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+}
+
+.task-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.task-delete:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
 }
 
@@ -1301,54 +1647,90 @@ const latestSleepMinutes = computed(() => {
 .form-label {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: 8px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .form-input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
-  padding: var(--space-sm);
+  padding: 10px 14px;
   color: var(--text-primary);
+  font-size: var(--text-sm);
+  transition: all 0.2s ease;
 }
+
+.form-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+}
+
 
 .task-type-buttons {
   display: flex;
-  gap: var(--space-sm);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .task-type-btn {
   flex: 1;
-  padding: var(--space-sm);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px;
+  border-radius: calc(var(--radius-sm) - 2px);
+  border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all 0.2s ease;
+}
+
+.task-type-btn:hover {
+  color: var(--text-secondary);
 }
 
 .task-type-btn--active {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.5);
-  color: var(--color-green);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .form-error {
   color: var(--color-red);
   font-size: var(--text-xs);
+  background: rgba(239, 68, 68, 0.1);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .form-submit {
   width: 100%;
-  padding: var(--space-sm);
-  border-radius: var(--radius-chip);
+  padding: 12px;
+  border-radius: var(--radius-sm);
   border: none;
   background: var(--color-blue);
   color: var(--color-white);
-  font-weight: var(--font-semibold);
+  font-weight: var(--font-bold);
+  font-size: var(--text-sm);
   cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 8px;
+}
+
+.form-submit:hover {
+  background: var(--color-blue-light);
+}
+
+.form-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .task-modal-list {
@@ -1422,11 +1804,90 @@ const latestSleepMinutes = computed(() => {
   gap: var(--space-md);
 }
 
+/* Full Width Form Layout */
+.settings-section,
+.task-form {
+  width: 100%;
+}
+
+.city-search-container {
+  position: relative;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.city-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.city-suggestion-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.city-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.city-suggestion-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.input-spinner {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--color-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
 .settings-radio-group {
   display: flex;
   gap: var(--space-md);
   font-size: var(--text-sm);
   color: var(--text-secondary);
+}
+
+.settings-radio-group--compact {
+  gap: var(--space-sm);
+}
+
+.settings-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .coordinates-grid {
