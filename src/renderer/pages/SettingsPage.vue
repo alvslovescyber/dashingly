@@ -47,6 +47,73 @@
           </div>
         </template>
 
+        <!-- Display -->
+        <template v-else-if="currentSection === 'display'">
+          <div v-if="brightnessLoading" class="form-field">
+            <p class="form-hint">Loading brightness status...</p>
+          </div>
+
+          <template v-else-if="brightnessSupported">
+            <div class="form-field">
+              <label class="form-label">Screen brightness</label>
+              <div class="brightness-control">
+                <button
+                  class="brightness-btn"
+                  type="button"
+                  :disabled="currentBrightness <= 0"
+                  @click="decreaseBrightness"
+                >
+                  <span class="brightness-btn__icon">-</span>
+                </button>
+                <div class="brightness-slider-wrap">
+                  <input
+                    type="range"
+                    class="brightness-slider"
+                    min="0"
+                    max="100"
+                    step="5"
+                    :value="currentBrightness"
+                    @input="
+                      e => handleBrightnessChange(Number((e.target as HTMLInputElement).value))
+                    "
+                  />
+                  <span class="brightness-value">{{ currentBrightness }}%</span>
+                </div>
+                <button
+                  class="brightness-btn"
+                  type="button"
+                  :disabled="currentBrightness >= 100"
+                  @click="increaseBrightness"
+                >
+                  <span class="brightness-btn__icon">+</span>
+                </button>
+              </div>
+              <p class="form-hint">Adjust the screen brightness for your Raspberry Pi display.</p>
+            </div>
+          </template>
+
+          <div v-else class="form-field">
+            <p class="form-label">Brightness control unavailable</p>
+            <p class="form-hint">
+              Hardware brightness control is not available on this device. This feature requires a
+              Raspberry Pi with an official touchscreen display.
+            </p>
+          </div>
+
+          <!-- Screensaver -->
+          <div class="settings-action-card">
+            <div>
+              <p class="settings-action-card__title">Screensaver</p>
+              <p class="settings-action-card__copy">
+                Activates automatically after 5 minutes of inactivity.
+              </p>
+            </div>
+            <button class="settings-button settings-button--ghost" @click="startScreensaver">
+              Start now
+            </button>
+          </div>
+        </template>
+
         <!-- Weather -->
         <template v-else-if="currentSection === 'weather'">
           <div class="form-field">
@@ -178,7 +245,7 @@
                   :class="
                     integrationStatus.spotify.connected
                       ? 'status-pill--success'
-                      : 'status-pill--muted'
+                      : 'status-pill--danger'
                   "
                 >
                   {{ integrationStatus.spotify.connected ? 'Connected' : 'Not connected' }}
@@ -268,7 +335,7 @@
                   :class="
                     integrationStatus.strava.connected
                       ? 'status-pill--success'
-                      : 'status-pill--muted'
+                      : 'status-pill--danger'
                   "
                 >
                   {{ integrationStatus.strava.connected ? 'Connected' : 'Not connected' }}
@@ -577,8 +644,16 @@
 import { computed, inject, onMounted, onUnmounted, reactive, ref, watch, type Ref } from 'vue'
 import TogglePill from '../components/TogglePill.vue'
 import ModalSheet from '../components/ModalSheet.vue'
+import Screensaver from '../components/Screensaver.vue'
 import { useDashboard } from '../composables/useDashboard'
 import type { Settings, WeatherSettings } from '@shared/types'
+
+// Screensaver ref from App.vue
+const screensaverRef = inject<Ref<InstanceType<typeof Screensaver> | undefined>>('screensaver')
+
+function startScreensaver() {
+  screensaverRef?.value?.activate()
+}
 
 type ToastHandle = {
   success: (message: string, description?: string) => void
@@ -631,6 +706,7 @@ function getServiceLabel(service: IntegrationService): string {
 
 const navSections = [
   { id: 'general', label: 'General', description: 'Greeting & personalization' },
+  { id: 'display', label: 'Display', description: 'Brightness controls' },
   { id: 'weather', label: 'Weather', description: 'City search and units' },
   { id: 'integrations', label: 'Integrations', description: 'Spotify · Strava · Weather' },
   { id: 'ai', label: 'AI', description: 'Suggestions & OpenAI key' },
@@ -691,6 +767,11 @@ const displayNameInput = ref(displayName.value ?? '')
 const savingDisplayName = ref(false)
 const displayNameError = ref<string | null>(null)
 
+// Display / Brightness
+const brightnessSupported = ref(false)
+const currentBrightness = ref(50)
+const brightnessLoading = ref(true)
+
 watch(displayName, value => {
   displayNameInput.value = value ?? ''
 })
@@ -714,6 +795,42 @@ async function saveDisplayName() {
   } finally {
     savingDisplayName.value = false
   }
+}
+
+// Brightness functions
+async function loadBrightnessStatus() {
+  brightnessLoading.value = true
+  try {
+    brightnessSupported.value = await window.electronAPI.getBrightnessSupport()
+    if (brightnessSupported.value) {
+      currentBrightness.value = await window.electronAPI.getBrightness()
+    }
+  } catch (error) {
+    console.error('Failed to load brightness status', error)
+    brightnessSupported.value = false
+  } finally {
+    brightnessLoading.value = false
+  }
+}
+
+async function handleBrightnessChange(value: number) {
+  currentBrightness.value = value
+  try {
+    await window.electronAPI.setBrightness(value)
+  } catch (error) {
+    console.error('Failed to set brightness', error)
+    showToast('error', 'Unable to change brightness')
+  }
+}
+
+function decreaseBrightness() {
+  const newValue = Math.max(0, currentBrightness.value - 10)
+  handleBrightnessChange(newValue)
+}
+
+function increaseBrightness() {
+  const newValue = Math.min(100, currentBrightness.value + 10)
+  handleBrightnessChange(newValue)
 }
 
 function syncIntegrationToggles() {
@@ -1216,6 +1333,7 @@ onMounted(() => {
   loadOpenAIKeyStatus()
   loadAppInfo()
   loadIntegrationStatus()
+  loadBrightnessStatus()
 })
 
 onUnmounted(() => {
@@ -1623,6 +1741,7 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: var(--font-semibold);
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .status-pill--success {
@@ -1635,6 +1754,12 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: var(--text-tertiary);
+}
+
+.status-pill--danger {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.28);
+  color: #f87171;
 }
 
 .ai-actions {
@@ -1705,5 +1830,103 @@ onUnmounted(() => {
   to {
     transform: translateY(-50%) rotate(360deg);
   }
+}
+
+/* Brightness Control */
+.brightness-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.brightness-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.brightness-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.brightness-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.brightness-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.brightness-btn__icon {
+  font-weight: var(--font-bold);
+  line-height: 1;
+}
+
+.brightness-slider-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.brightness-slider {
+  width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+}
+
+.brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.brightness-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.brightness-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.brightness-value {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  min-width: 48px;
+  text-align: center;
 }
 </style>

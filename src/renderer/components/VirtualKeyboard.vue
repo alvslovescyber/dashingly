@@ -5,7 +5,7 @@
         <span>On-screen keyboard</span>
         <button class="vk__close" type="button" @click="$emit('close')">Hide</button>
       </div>
-      <div class="vk__row" v-for="(row, index) in rows" :key="index">
+      <div v-for="(row, index) in rows" :key="index" class="vk__row">
         <button
           v-for="key in row"
           :key="key.label"
@@ -59,18 +59,7 @@ const rows = computed<KeyDef[][]>(() => [
     '0',
     { label: '⌫', action: 'backspace', wide: true },
   ].map(normalizeKey),
-  [
-    'q',
-    'w',
-    'e',
-    'r',
-    't',
-    'y',
-    'u',
-    'i',
-    'o',
-    'p',
-  ].map(normalizeKey),
+  ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'].map(normalizeKey),
   ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'].map(normalizeKey),
   ['z', 'x', 'c', 'v', 'b', 'n', 'm'].map(normalizeKey),
   [
@@ -152,7 +141,8 @@ function handleKey(key: KeyDef) {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-button);
   cursor: pointer;
-  transition: transform var(--duration-fast) var(--ease-out),
+  transition:
+    transform var(--duration-fast) var(--ease-out),
     background var(--duration-fast) var(--ease-out);
 }
 
@@ -172,7 +162,8 @@ function handleKey(key: KeyDef) {
 
 .vk-slide-enter-active,
 .vk-slide-leave-active {
-  transition: transform var(--duration-normal) var(--ease-out),
+  transition:
+    transform var(--duration-normal) var(--ease-out),
     opacity var(--duration-normal) var(--ease-out);
 }
 .vk-slide-enter-from,

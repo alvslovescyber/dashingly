@@ -72,14 +72,14 @@
           </div>
         </TransitionGroup>
 
-        <!-- View All Button (outside transition) -->
+        <!-- View All Button (only shown when more than visible in tile) -->
         <button
-          v-if="suggestions.length > 0"
+          v-if="suggestions.length > 5"
           class="ai-inbox-view-all"
           type="button"
           @click="handleViewAll"
         >
-          View all<span v-if="suggestions.length > 3"> ({{ suggestions.length }})</span>
+          View all ({{ suggestions.length }})
         </button>
 
         <!-- Empty State -->
@@ -132,8 +132,8 @@ const emit = defineEmits<{
 const acceptingId = ref<string | null>(null)
 const dismissingId = ref<string | null>(null)
 
-// Show max 3 suggestions
-const displayedSuggestions = computed(() => props.suggestions.slice(0, 3))
+// Show all suggestions (scrollable)
+const displayedSuggestions = computed(() => props.suggestions)
 
 function truncateReason(reason: string, maxLength = 45): string {
   if (reason.length <= maxLength) return reason
@@ -225,6 +225,8 @@ function handleViewAll() {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Enable flex shrinking for scroll */
+  overflow: hidden;
 }
 
 .ai-inbox-list {
@@ -232,8 +234,10 @@ function handleViewAll() {
   flex-direction: column;
   gap: 6px;
   position: relative;
-  max-height: 210px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
   scrollbar-width: thin;
 }

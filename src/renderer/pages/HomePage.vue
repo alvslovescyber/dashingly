@@ -171,7 +171,7 @@
               </TileCard>
 
               <!-- Health Tile -->
-              <TileCard title="Health" :icon="Heart" class="tile--health" size="md">
+              <TileCard title="Health" :icon="Heart" class="tile--health" size="lg">
                 <div class="health-content">
                   <div class="health-stat">
                     <ProgressRing :value="healthDisplay.stepsPercent" :size="64" color="#22c55e">
@@ -193,36 +193,6 @@
                       <span class="health-stat-label">Calories</span>
                     </div>
                   </div>
-                </div>
-              </TileCard>
-
-              <!-- Daily Reading (Bible) Tile -->
-              <TileCard
-                title="Daily Reading"
-                :icon="BookOpen"
-                class="tile--bible tile--solid"
-                size="md"
-              >
-                <div class="bible-content">
-                  <div class="bible-header">
-                    <span class="bible-reference">{{ currentReference }}</span>
-                  </div>
-                  <div class="bible-verse-container">
-                    <div class="bible-verse-border" />
-                    <p class="bible-verse">
-                      "{{ verseMain
-                      }}<span v-if="verseRest" class="bible-verse__rest">{{ verseRest }}</span
-                      >"
-                    </p>
-                  </div>
-                  <button
-                    class="bible-button"
-                    :class="{ 'bible-button--done': isBibleCompleted }"
-                    @click="handleBibleAction"
-                  >
-                    <Check v-if="isBibleCompleted" :size="14" />
-                    <span>{{ isBibleCompleted ? 'Completed' : 'Mark as Done' }}</span>
-                  </button>
                 </div>
               </TileCard>
             </div>
@@ -255,7 +225,7 @@
                   color="#22C55E"
                   gradient-start="rgba(34, 197, 94, 0.12)"
                   gradient-end="rgba(34, 197, 94, 0.02)"
-                  :height="140"
+                  :height="180"
                   :smart-scale="false"
                   :min-value="0"
                 />
@@ -269,7 +239,7 @@
                     type="button"
                     @click.stop="openSettingsPanel"
                   >
-                    <SettingsIcon :size="16" />
+                    <SettingsIcon :size="14" />
                   </button>
                 </template>
 
@@ -287,7 +257,7 @@
                   <!-- Data Available -->
                   <template v-else>
                     <div class="weather-today">
-                      <component :is="weatherIcon" :size="44" class="weather-icon" />
+                      <component :is="weatherIcon" :size="40" class="weather-icon" />
                       <div class="weather-temps">
                         <span class="weather-current">
                           {{ formatTemperature(weatherData.temperature) }}
@@ -481,19 +451,22 @@
             <div class="music-page">
               <TileCard title="Now playing" :icon="Music" :interactive="false">
                 <div v-if="spotifyData.connected && spotifyData.track" class="music-now-playing">
-                  <div class="music-now-playing__headline">{{ spotifyData.track }}</div>
-                  <span class="music-now-playing__artist">{{ spotifyData.artist }}</span>
-                  <div class="music-now-playing__progress">
-                    <span>{{ formatDuration(spotifyData.progressMs) }}</span>
-                    <div class="music-now-playing__bar">
-                      <div
-                        class="music-now-playing__bar-fill"
-                        :style="{
-                          width: `${(spotifyData.progressMs / spotifyData.durationMs) * 100}%`,
-                        }"
-                      />
+                  <div class="music-now-playing__art">
+                    <img :src="musicArt" alt="Album art" @error="handleMusicArtError" />
+                  </div>
+                  <div class="music-now-playing__body">
+                    <div class="music-now-playing__headline">{{ spotifyData.track }}</div>
+                    <span class="music-now-playing__artist">{{ spotifyData.artist }}</span>
+                    <div class="music-now-playing__progress">
+                      <span>{{ formatDuration(spotifyData.progressMs) }}</span>
+                      <div class="music-now-playing__bar">
+                        <div
+                          class="music-now-playing__bar-fill"
+                          :style="{ width: `${musicProgressPercent}%` }"
+                        />
+                      </div>
+                      <span>{{ formatDuration(spotifyData.durationMs) }}</span>
                     </div>
-                    <span>{{ formatDuration(spotifyData.durationMs) }}</span>
                   </div>
                 </div>
                 <div v-else class="music-empty">
@@ -1044,6 +1017,8 @@ const pendingAISuggestions = computed(() => aiSuggestions.value)
 // Daily Reading - Verse of the Day (from local JSON for now, syncced with DB status)
 const verseData = useVerseOfDay()
 const verseHistory = verseData.history
+const musicFallbackArt =
+  'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/a5/c4/90/a5c490a1-d914-9943-7e02-32f8320e5840/12UMGIM12516.rgb.jpg/600x600bb.jpg'
 
 // Computed verse parts for better text hierarchy
 const verseMain = computed(() => {
@@ -1179,6 +1154,21 @@ const latestHealthSteps = computed(() => {
   const last = trend[trend.length - 1]
   return last ? Math.round(last * 1300).toLocaleString() : '--'
 })
+
+const musicArt = computed(() => spotifyData.value.albumArt || musicFallbackArt)
+
+const musicProgressPercent = computed(() => {
+  if (!spotifyData.value.durationMs) return 0
+  const pct = (spotifyData.value.progressMs / spotifyData.value.durationMs) * 100
+  return Math.min(100, Math.max(0, pct))
+})
+
+function handleMusicArtError(event: Event) {
+  const target = event.target as HTMLImageElement
+  if (target && target.src !== musicFallbackArt) {
+    target.src = musicFallbackArt
+  }
+}
 </script>
 
 <style scoped>
@@ -1229,6 +1219,22 @@ const latestHealthSteps = computed(() => {
   flex: 1;
   overflow: hidden;
   touch-action: pan-x;
+  min-height: 0; /* Allow flex child to shrink */
+}
+
+/* Custom scrollbar for sections */
+.home-page__section::-webkit-scrollbar {
+  width: 6px;
+}
+.home-page__section::-webkit-scrollbar-track {
+  background: transparent;
+}
+.home-page__section::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+.home-page__section::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .home-page__grid {
@@ -1243,6 +1249,10 @@ const latestHealthSteps = computed(() => {
   flex-direction: column;
   gap: var(--space-md);
   overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: var(--space-lg);
+  /* Ensure content doesn't get cut off */
+  min-height: 0;
 }
 
 .home-page__section--placeholder {
@@ -1620,7 +1630,7 @@ const latestHealthSteps = computed(() => {
 }
 
 .tile--health {
-  flex: 1.5;
+  flex: 2;
 }
 
 .reading-page {
@@ -1703,14 +1713,38 @@ const latestHealthSteps = computed(() => {
 }
 
 .music-now-playing {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.music-now-playing__art {
+  width: 112px;
+  height: 112px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.25);
+}
+
+.music-now-playing__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.music-now-playing__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: 6px;
 }
 
 .music-now-playing__headline {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: var(--font-semibold);
+  line-height: 1.2;
 }
 
 .music-now-playing__artist {
@@ -1928,11 +1962,11 @@ const latestHealthSteps = computed(() => {
 
 /* Bottom Row */
 .home-page__row--bottom {
-  min-height: 140px;
+  min-height: 200px;
 }
 
 .tile--energy {
-  flex: 2;
+  flex: 2.25;
 }
 
 .energy-toggle {
@@ -1964,7 +1998,7 @@ const latestHealthSteps = computed(() => {
 }
 
 .tile--weather {
-  flex: 1;
+  flex: 1.25;
 }
 
 .weather-content {
@@ -2028,21 +2062,23 @@ const latestHealthSteps = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .weather-icon {
   color: var(--color-orange);
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.3));
 }
 
 .weather-temps {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 4px;
 }
 
 .weather-current {
-  font-size: var(--text-2xl);
+  font-size: 26px;
   font-weight: var(--font-bold);
   color: var(--color-white);
   letter-spacing: -0.02em;
@@ -2053,7 +2089,7 @@ const latestHealthSteps = computed(() => {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
@@ -2066,18 +2102,18 @@ const latestHealthSteps = computed(() => {
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 4px;
+  margin-top: 0;
 }
 
 .weather-condition {
-  font-size: var(--text-xs);
+  font-size: 12px;
   color: var(--text-secondary);
   text-transform: capitalize;
 }
 
 .weather-location-inline {
-  font-size: var(--text-sm);
+  font-size: 14px;
   color: var(--text-primary);
   opacity: 0.82;
   font-weight: var(--font-medium);
@@ -2085,15 +2121,16 @@ const latestHealthSteps = computed(() => {
 
 .weather-week {
   display: flex;
-  gap: var(--space-sm);
+  gap: 10px;
   margin-top: auto;
+  padding-bottom: 6px;
 }
 
 .weather-day {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .weather-footer {
@@ -2118,13 +2155,13 @@ const latestHealthSteps = computed(() => {
 }
 
 .weather-day-high {
-  font-size: var(--text-sm);
+  font-size: 12px;
   font-weight: var(--font-semibold);
   color: var(--text-primary);
 }
 
 .weather-day-low {
-  font-size: var(--text-xs);
+  font-size: 11px;
   color: var(--text-tertiary);
 }
 

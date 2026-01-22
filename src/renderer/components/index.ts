@@ -13,6 +13,7 @@ export { default as ModalSheet } from './ModalSheet.vue'
 export { default as SpotifyBar } from './SpotifyBar.vue'
 export { default as DaySummaryTile } from './DaySummaryTile.vue'
 export { default as VirtualKeyboard } from './VirtualKeyboard.vue'
+export { default as Screensaver } from './Screensaver.vue'
 
 // Tile components
 export { default as AIInboxTile } from './tiles/AIInboxTile.vue'

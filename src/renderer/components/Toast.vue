@@ -33,6 +33,11 @@
 <script setup lang="ts">
 import { ref, type Component } from 'vue'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-vue-next'
+import {
+  playNotificationSound,
+  playSoftNotification,
+  playSuccessSound,
+} from '../utils/notification-sound'
 
 interface Toast {
   id: number
@@ -40,6 +45,7 @@ interface Toast {
   message: string
   description?: string
   duration?: number
+  sound?: boolean // Whether to play sound (default: true)
   action?: {
     label: string
     handler: () => void
@@ -59,11 +65,33 @@ function getIcon(type: Toast['type']): Component {
   return icons[type]
 }
 
+function playToastSound(type: Toast['type']) {
+  switch (type) {
+    case 'success':
+      playSuccessSound()
+      break
+    case 'error':
+    case 'warning':
+      playNotificationSound()
+      break
+    case 'info':
+    default:
+      playSoftNotification()
+      break
+  }
+}
+
 function show(toast: Omit<Toast, 'id'>) {
   const id = ++toastId
   const duration = toast.duration ?? (toast.type === 'error' ? 6000 : 4500)
+  const shouldPlaySound = toast.sound !== false
 
   toasts.value.push({ ...toast, id })
+
+  // Play appropriate sound based on type
+  if (shouldPlaySound) {
+    playToastSound(toast.type)
+  }
 
   if (duration > 0) {
     setTimeout(() => dismiss(id), duration)

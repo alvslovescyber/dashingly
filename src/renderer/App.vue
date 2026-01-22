@@ -18,16 +18,62 @@
 
   <!-- Toast Container -->
   <Toast ref="toastRef" />
+
+  <!-- Screensaver -->
+  <Screensaver
+    ref="screensaverRef"
+    :timeout="5 * 60 * 1000"
+    :enabled="screensaverEnabled"
+    :location="weatherData.location || 'London, UK'"
+    @activate="handleScreensaverActivate"
+    @dismiss="handleScreensaverDismiss"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { GlassShell, Toast } from './components'
+import { GlassShell, Toast, Screensaver } from './components'
+import { useDashboard } from './composables/useDashboard'
+import { useVoiceActivation } from './composables/useVoiceActivation'
+import { initAudio } from './utils/notification-sound'
 import HomePage from './pages/HomePage.vue'
 import { DESIGN_WIDTH, DESIGN_HEIGHT, getDynamicScale } from './theme/scaling'
 
+// Dashboard data
+const { weatherData } = useDashboard()
+
 // Toast ref for global access
 const toastRef = ref<InstanceType<typeof Toast>>()
+
+// Screensaver
+const screensaverRef = ref<InstanceType<typeof Screensaver>>()
+const screensaverEnabled = ref(true)
+
+function handleScreensaverActivate() {
+  console.log('Screensaver activated')
+}
+
+function handleScreensaverDismiss() {
+  console.log('Screensaver dismissed')
+}
+
+// Voice activation for screensaver wake
+const { isSupported: voiceSupported, isListening: voiceListening } = useVoiceActivation({
+  wakeWord: 'hey alvis',
+  enabled: true,
+  onWake: () => {
+    // Dismiss screensaver when wake word detected
+    if (screensaverRef.value?.isActive) {
+      screensaverRef.value.dismiss()
+      console.log('Screensaver dismissed via voice')
+    }
+  },
+})
+
+// Log voice activation status (for debugging)
+if (voiceSupported.value) {
+  console.log('Voice activation supported, listening:', voiceListening.value)
+}
 
 // Scaling
 const currentScale = ref(getDynamicScale())
@@ -39,6 +85,15 @@ function updateScale() {
 onMounted(() => {
   window.addEventListener('resize', updateScale)
   updateScale()
+
+  // Initialize audio on first interaction (required by browsers)
+  const initAudioOnInteraction = () => {
+    initAudio()
+    document.removeEventListener('click', initAudioOnInteraction)
+    document.removeEventListener('touchstart', initAudioOnInteraction)
+  }
+  document.addEventListener('click', initAudioOnInteraction, { once: true })
+  document.addEventListener('touchstart', initAudioOnInteraction, { once: true })
 })
 
 onUnmounted(() => {
@@ -63,9 +118,10 @@ const scaledStyle = computed(() => {
   }
 })
 
-// Provide toast globally
+// Provide toast and screensaver globally
 import { provide } from 'vue'
 provide('toast', toastRef)
+provide('screensaver', screensaverRef)
 </script>
 
 <style scoped>
